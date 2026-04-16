@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TypeForge — Font Style Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #161616;
+  --surface2: #1e1e1e;
+  --surface3: #252525;
+  --border: #272727;
+  --border-hover: #3a3a3a;
+  --text: #f0f0f0;
+  --text-dim: #a0a0a0;
+  --text-muted: #555;
+  --accent: #6e56cf;
+  --accent-light: #9b8af4;
+  --accent-dim: rgba(110,86,207,0.15);
+  --accent-glow: rgba(110,86,207,0.3);
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-xs: 3px;
+  --panel-w: 300px;
+  --transition: 120ms ease;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html,body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Left Panel ─────────────────────────────────────────────────────────── */
+.panel {
+  width: var(--panel-w);
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.panel-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel-header h1 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text);
+}
+
+.panel-header .tagline {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.sec-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Text Input ─────────────────────────────────────────────────────────── */
+#word-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+  letter-spacing: -0.2px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  caret-color: var(--accent-light);
+}
+
+#word-input::placeholder { color: var(--text-muted); }
+
+#word-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* ── Style Tags ─────────────────────────────────────────────────────────── */
+.style-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.style-tag {
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+}
+
+.style-tag:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.style-tag.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+/* ── Font Grid ──────────────────────────────────────────────────────────── */
+.font-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.font-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  cursor: pointer;
+  transition: all var(--transition);
+  overflow: hidden;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  position: relative;
+}
+
+.font-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  opacity: 0;
+  background: radial-gradient(circle at 50% 40%, var(--accent-dim) 0%, transparent 70%);
+  transition: opacity var(--transition);
+}
+
+.font-card:hover {
+  border-color: var(--border-hover);
+  background: var(--surface3);
+}
+
+.font-card.active {
+  border-color: var(--accent);
+  background: var(--surface3);
+}
+
+.font-card.active::after { opacity: 1; }
+
+.card-preview {
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+  z-index: 1;
+}
+
+.card-name {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+.font-card.active .card-name {
+  color: var(--accent-light);
+}
+
+/* ── Sliders ────────────────────────────────────────────────────────────── */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.slider-row:last-of-type { margin-bottom: 0; }
+
+.slider-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  width: 76px;
+  flex-shrink: 0;
+}
+
+.slider-wrap { flex: 1; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--border-hover);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  background: var(--accent-light);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(155,138,244,0.2);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 5px rgba(155,138,244,0.25);
+}
+
+.slider-val {
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Toggle Row ─────────────────────────────────────────────────────────── */
+.toggle-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.toggle-btn {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.toggle-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.toggle-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+/* ── Swatches ───────────────────────────────────────────────────────────── */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.06);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  flex-shrink: 0;
+}
+
+.swatch:hover { transform: scale(1.18); }
+
+.swatch.active {
+  border-color: rgba(255,255,255,0.7);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px rgba(255,255,255,0.4);
+}
+
+.color-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.color-pick {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 80px;
+}
+
+.color-pick label {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  cursor: pointer;
+  padding: 1px;
+  transition: border-color var(--transition);
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+input[type="color"]:hover { border-color: var(--accent); }
+
+.invert-btn {
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.invert-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--surface3);
+}
+
+/* ── Decorations ────────────────────────────────────────────────────────── */
+.deco-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.deco-btn {
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.deco-btn .deco-icon {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.deco-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--surface3);
+}
+
+.deco-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.shadow-controls {
+  margin-top: 10px;
+  display: none;
+}
+
+.shadow-controls.visible { display: block; }
+
+/* ── Right Panel ────────────────────────────────────────────────────────── */
+.preview-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.preview-bar {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+.preview-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-font {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-tag {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.size-btns {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.size-btn {
+  padding: 5px 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  border-right: 1px solid var(--border);
+}
+
+.size-btn:last-child { border-right: none; }
+
+.size-btn:hover { color: var(--text); background: var(--surface3); }
+
+.size-btn.active {
+  background: var(--accent-dim);
+  color: var(--accent-light);
+}
+
+.bar-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.action-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--surface3);
+}
+
+.action-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.action-btn.primary:hover {
+  background: #7d64de;
+  border-color: #7d64de;
+}
+
+/* ── Preview Canvas ─────────────────────────────────────────────────────── */
+.preview-canvas {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition: background 0.1s;
+}
+
+.preview-canvas-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transition: max-width 0.2s ease;
+  position: relative;
+}
+
+#preview-text {
+  max-width: 90%;
+  word-break: break-word;
+  padding: 40px;
+  transition: font-family 0.1s, color 0.1s;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Grid overlay (subtle) ──────────────────────────────────────────────── */
+.preview-canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.2s;
+}
+
+.preview-canvas-inner { z-index: 1; }
+
+/* Hide grid when bg is light */
+.preview-canvas.light-bg::before {
+  opacity: 0;
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--surface3);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.18s, transform 0.18s;
+  white-space: nowrap;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  html, body { overflow: auto; height: auto; }
+  .app { flex-direction: column; height: auto; }
+  .panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+  .panel-body { overflow: visible; max-height: none; }
+  .preview-panel { min-height: 60vh; }
+  .preview-bar { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ LEFT PANEL ══════════════════════════════════════════════════════ -->
+  <div class="panel">
+
+    <div class="panel-header">
+      <h1>TypeForge</h1>
+      <span class="tagline">Font Generator</span>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- Text -->
+      <div class="section">
+        <div class="sec-label">Text</div>
+        <input type="text" id="word-input" placeholder="Type something…" value="Hello World" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <!-- Style -->
+      <div class="section">
+        <div class="sec-label">Style</div>
+        <div class="style-tags" id="style-tags"></div>
+      </div>
+
+      <!-- Fonts -->
+      <div class="section">
+        <div class="sec-label">Fonts</div>
+        <div class="font-grid" id="font-grid"></div>
+      </div>
+
+      <!-- Typography -->
+      <div class="section">
+        <div class="sec-label">Typography</div>
+
+        <div class="slider-row">
+          <span class="slider-label">Weight</span>
+          <div class="slider-wrap"><input type="range" id="weight" min="100" max="900" step="100" value="400"></div>
+          <span class="slider-val" id="weight-val">400</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Size</span>
+          <div class="slider-wrap"><input type="range" id="size" min="20" max="200" step="1" value="72"></div>
+          <span class="slider-val" id="size-val">72px</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Spacing</span>
+          <div class="slider-wrap"><input type="range" id="spacing" min="-10" max="50" step="0.5" value="0"></div>
+          <span class="slider-val" id="spacing-val">0px</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Line Height</span>
+          <div class="slider-wrap"><input type="range" id="lineheight" min="0.8" max="3.0" step="0.05" value="1.2"></div>
+          <span class="slider-val" id="lineheight-val">1.20</span>
+        </div>
+
+        <div class="toggle-row">
+          <button class="toggle-btn" id="italic-btn" title="Toggle italic">Italic</button>
+          <button class="toggle-btn active" data-align="left">Left</button>
+          <button class="toggle-btn" data-align="center">Center</button>
+          <button class="toggle-btn" data-align="right">Right</button>
+        </div>
+      </div>
+
+      <!-- Color -->
+      <div class="section">
+        <div class="sec-label">Color</div>
+        <div class="swatches" id="swatches"></div>
+        <div class="color-row">
+          <div class="color-pick">
+            <label>Text</label>
+            <input type="color" id="text-color" value="#ffffff">
+          </div>
+          <div class="color-pick">
+            <label>BG</label>
+            <input type="color" id="bg-color" value="#0f0f0f">
+          </div>
+          <button class="invert-btn" id="invert-btn">⇄ Invert</button>
+        </div>
+      </div>
+
+      <!-- Decorations -->
+      <div class="section">
+        <div class="sec-label">Decorations</div>
+        <div class="deco-grid">
+          <button class="deco-btn" data-deco="underline"><span class="deco-icon">_</span>Underline</button>
+          <button class="deco-btn" data-deco="overline"><span class="deco-icon">‾</span>Overline</button>
+          <button class="deco-btn" data-deco="strike"><span class="deco-icon">—</span>Strikethrough</button>
+          <button class="deco-btn" data-deco="shadow"><span class="deco-icon">◼</span>Drop Shadow</button>
+          <button class="deco-btn" data-deco="long-shadow"><span class="deco-icon">▦</span>Long Shadow</button>
+          <button class="deco-btn" data-deco="outline"><span class="deco-icon">□</span>Outline Only</button>
+          <button class="deco-btn" data-deco="neon"><span class="deco-icon">◉</span>Neon Glow</button>
+          <button class="deco-btn" data-deco="stamp"><span class="deco-icon">▣</span>Stamp Effect</button>
+        </div>
+
+        <div class="shadow-controls" id="shadow-controls">
+          <div class="slider-row" style="margin-top:10px">
+            <span class="slider-label">Shadow Offset</span>
+            <div class="slider-wrap"><input type="range" id="shadow-offset" min="1" max="24" step="1" value="4"></div>
+            <span class="slider-val" id="shadow-offset-val">4px</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">Shadow Blur</span>
+            <div class="slider-wrap"><input type="range" id="shadow-blur" min="0" max="40" step="1" value="8"></div>
+            <span class="slider-val" id="shadow-blur-val">8px</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panel-body -->
+  </div><!-- /panel -->
+
+  <!-- ══ RIGHT PANEL ════════════════════════════════════════════════════ -->
+  <div class="preview-panel">
+
+    <div class="preview-bar">
+      <div class="preview-meta">
+        <div class="preview-font" id="preview-font">Inter</div>
+        <div class="preview-tag" id="preview-tag">Minimal / Clean</div>
+      </div>
+
+      <div class="size-btns">
+        <button class="size-btn" data-sz="S">S</button>
+        <button class="size-btn active" data-sz="M">M</button>
+        <button class="size-btn" data-sz="L">L</button>
+        <button class="size-btn" data-sz="Full">Full</button>
+      </div>
+
+      <div class="bar-actions">
+        <button class="action-btn" id="btn-css">Copy CSS</button>
+        <button class="action-btn" id="btn-svg">SVG</button>
+        <button class="action-btn primary" id="btn-png">PNG</button>
+      </div>
+    </div>
+
+    <div class="preview-canvas" id="preview-canvas">
+      <div class="preview-canvas-inner" id="preview-inner">
+        <div id="preview-text">Hello World</div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════════════════════════════ */
+
+const STYLES = {
+  'Cute / Playful':      ['Pacifico','Baloo 2','Fredoka','Boogaloo','Chewy','Bubblegum Sans','Lilita One','Titan One'],
+  'Minimal / Clean':     ['Inter','DM Sans','Figtree','Epilogue','Onest','Geist','Plus Jakarta Sans','Cabinet Grotesk'],
+  'Graphic / Display':   ['Bebas Neue','Anton','Black Han Sans','Teko','Barlow Condensed','Big Shoulders Display','Oswald','Squada One'],
+  'Avant-garde':         ['Syne','Space Grotesk','Outfit','Lexend','Plus Jakarta Sans','Oxanium','Exo 2','Chakra Petch'],
+  'Retro / Vintage':     ['Playfair Display','Abril Fatface','Josefin Sans','Righteous','Alfa Slab One','Yeseva One','Arvo','Zilla Slab'],
+  'Elegant / Serif':     ['Cormorant Garamond','EB Garamond','Libre Baskerville','Lora','Fraunces','Instrument Serif','Young Serif','Spectral'],
+  'Brutal / Expressive': ['Permanent Marker','Rubik Mono One','Russo One','Secular One','Archivo Black','Unbounded','Boogaloo','Big Shoulders Display'],
+  'Psychedelic / Art':   ['Bungee','Bungee Shade','Bungee Inline','Monoton','Faster One','Stalinist One','ZCOOL KuaiLe','Nabla'],
+};
+
+const SWATCHES = [
+  '#000000','#ffffff','#c0392b','#e5534b','#e67e22',
+  '#27ae60','#16a085','#2471a3','#8e44ad','#e91e8c',
+  '#b5cc18','#f2ede1'
+];
+
+/* ════════════════════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════════════════════ */
+
+const S = {
+  text:        'Hello World',
+  style:       'Minimal / Clean',
+  font:        'Inter',
+  weight:      400,
+  size:        72,
+  spacing:     0,
+  lineHeight:  1.2,
+  italic:      false,
+  align:       'left',
+  textColor:   '#ffffff',
+  bgColor:     '#0f0f0f',
+  decos:       new Set(),
+  shadowOff:   4,
+  shadowBlur:  8,
+  previewSz:   'M',
+  loaded:      new Set(),
+};
+
+/* ════════════════════════════════════════════════════════════════════════
+   GOOGLE FONTS
+════════════════════════════════════════════════════════════════════════ */
+
+function loadFonts(fonts) {
+  const needed = fonts.filter(f => !S.loaded.has(f));
+  if (!needed.length) return;
+  // Build URL — request all weights for each font
+  const families = needed.map(f => `family=${encodeURIComponent(f)}:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700`).join('&');
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.crossOrigin = 'anonymous';
+  link.href = `https://fonts.googleapis.com/css2?${families}&display=swap`;
+  document.head.appendChild(link);
+  needed.forEach(f => S.loaded.add(f));
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BUILD UI
+════════════════════════════════════════════════════════════════════════ */
+
+function buildStyleTags() {
+  const el = document.getElementById('style-tags');
+  el.innerHTML = '';
+  for (const name of Object.keys(STYLES)) {
+    const btn = document.createElement('button');
+    btn.className = 'style-tag' + (name === S.style ? ' active' : '');
+    btn.textContent = name;
+    btn.addEventListener('click', () => pickStyle(name));
+    el.appendChild(btn);
+  }
+}
+
+function buildSwatches() {
+  const el = document.getElementById('swatches');
+  el.innerHTML = '';
+  SWATCHES.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (c.toLowerCase() === S.textColor.toLowerCase() ? ' active' : '');
+    sw.style.background = c;
+    if (c === '#ffffff' || c === '#f2ede1') sw.style.borderColor = 'rgba(255,255,255,0.12)';
+    sw.addEventListener('click', () => {
+      S.textColor = c;
+      document.getElementById('text-color').value = c;
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      render();
+    });
+    el.appendChild(sw);
+  });
+}
+
+function buildFontGrid(fonts) {
+  const grid = document.getElementById('font-grid');
+  grid.innerHTML = '';
+  fonts.forEach(font => {
+    const card = document.createElement('div');
+    card.className = 'font-card' + (font === S.font ? ' active' : '');
+    card.innerHTML = `
+      <div class="card-preview" style="font-family:'${font}',sans-serif;">${S.text || 'Aa'}</div>
+      <div class="card-name">${font}</div>`;
+    card.addEventListener('click', () => {
+      S.font = font;
+      document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      render();
+    });
+    grid.appendChild(card);
+  });
+}
+
+function refreshFontCardText() {
+  document.querySelectorAll('.card-preview').forEach(el => {
+    el.textContent = S.text || 'Aa';
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PICK STYLE
+════════════════════════════════════════════════════════════════════════ */
+
+function pickStyle(name) {
+  S.style = name;
+  document.querySelectorAll('.style-tag').forEach(b => {
+    b.classList.toggle('active', b.textContent === name);
+  });
+  const fonts = STYLES[name];
+  loadFonts(fonts);
+  S.font = fonts[0];
+  buildFontGrid(fonts);
+  render();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BIND CONTROLS
+════════════════════════════════════════════════════════════════════════ */
+
+function bindSlider(id, key, fmt) {
+  const sl = document.getElementById(id);
+  const vl = document.getElementById(id + '-val');
+  sl.addEventListener('input', () => {
+    S[key] = parseFloat(sl.value);
+    if (vl) vl.textContent = fmt(sl.value);
+    render();
+  });
+}
+
+function bindControls() {
+  // Text input
+  let t;
+  document.getElementById('word-input').addEventListener('input', e => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      S.text = e.target.value;
+      refreshFontCardText();
+      render();
+    }, 16);
+  });
+
+  // Sliders
+  bindSlider('weight',       'weight',     v => v);
+  bindSlider('size',         'size',       v => v + 'px');
+  bindSlider('spacing',      'spacing',    v => parseFloat(v).toFixed(1) + 'px');
+  bindSlider('lineheight',   'lineHeight', v => parseFloat(v).toFixed(2));
+  bindSlider('shadow-offset','shadowOff',  v => v + 'px');
+  bindSlider('shadow-blur',  'shadowBlur', v => v + 'px');
+
+  // Italic
+  document.getElementById('italic-btn').addEventListener('click', () => {
+    S.italic = !S.italic;
+    document.getElementById('italic-btn').classList.toggle('active', S.italic);
+    render();
+  });
+
+  // Align
+  document.querySelectorAll('[data-align]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      S.align = btn.dataset.align;
+      document.querySelectorAll('[data-align]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+  });
+
+  // Color pickers
+  document.getElementById('text-color').addEventListener('input', e => {
+    S.textColor = e.target.value;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    render();
+  });
+
+  document.getElementById('bg-color').addEventListener('input', e => {
+    S.bgColor = e.target.value;
+    render();
+  });
+
+  document.getElementById('invert-btn').addEventListener('click', () => {
+    [S.textColor, S.bgColor] = [S.bgColor, S.textColor];
+    document.getElementById('text-color').value = S.textColor;
+    document.getElementById('bg-color').value = S.bgColor;
+    render();
+  });
+
+  // Decorations
+  document.querySelectorAll('.deco-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = btn.dataset.deco;
+      S.decos.has(d) ? S.decos.delete(d) : S.decos.add(d);
+      btn.classList.toggle('active', S.decos.has(d));
+      const needsShadow = S.decos.has('shadow') || S.decos.has('long-shadow');
+      document.getElementById('shadow-controls').classList.toggle('visible', needsShadow);
+      render();
+    });
+  });
+
+  // Preview size
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      S.previewSz = btn.dataset.sz;
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyPreviewSize();
+    });
+  });
+
+  // Actions
+  document.getElementById('btn-css').addEventListener('click', copyCss);
+  document.getElementById('btn-png').addEventListener('click', exportPng);
+  document.getElementById('btn-svg').addEventListener('click', exportSvg);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   PREVIEW SIZE
+════════════════════════════════════════════════════════════════════════ */
+
+function applyPreviewSize() {
+  const inner = document.getElementById('preview-inner');
+  const map = { S: '360px', M: '600px', L: '860px', Full: '100%' };
+  const val = map[S.previewSz] || '600px';
+  inner.style.maxWidth = val;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════════════════════════════ */
+
+function buildShadow() {
+  const parts = [];
+  const c = S.textColor;
+
+  if (S.decos.has('shadow')) {
+    parts.push(`${S.shadowOff}px ${S.shadowOff}px ${S.shadowBlur}px rgba(0,0,0,0.55)`);
+  }
+
+  if (S.decos.has('long-shadow')) {
+    // 20-layer stacked shadow
+    for (let i = 1; i <= 20; i++) {
+      // color fades from semi-opaque to transparent
+      const alpha = (0.045 - i * 0.002).toFixed(3);
+      parts.push(`${i * 2}px ${i * 2}px 0 rgba(0,0,0,${alpha})`);
+    }
+  }
+
+  if (S.decos.has('neon')) {
+    parts.push(`0 0 6px ${c}, 0 0 16px ${c}, 0 0 35px ${c}, 0 0 60px ${c}`);
+  }
+
+  return parts.length ? parts.join(', ') : 'none';
+}
+
+function render() {
+  const el = document.getElementById('preview-text');
+  const canvas = document.getElementById('preview-canvas');
+
+  el.style.fontFamily    = `'${S.font}', sans-serif`;
+  el.style.fontWeight    = S.weight;
+  el.style.fontSize      = S.size + 'px';
+  el.style.letterSpacing = S.spacing + 'px';
+  el.style.lineHeight    = S.lineHeight;
+  el.style.fontStyle     = S.italic ? 'italic' : 'normal';
+  el.style.textAlign     = S.align;
+  el.textContent         = S.text || 'Type something…';
+
+  // Text color — transparent when outline-only
+  el.style.color = S.decos.has('outline') ? 'transparent' : S.textColor;
+
+  // Decoration
+  const decList = [];
+  if (S.decos.has('underline')) decList.push('underline');
+  if (S.decos.has('overline'))  decList.push('overline');
+  if (S.decos.has('strike'))    decList.push('line-through');
+  el.style.textDecoration = decList.length ? decList.join(' ') : 'none';
+  el.style.textDecorationColor = S.textColor;
+
+  // Text shadow
+  el.style.textShadow = buildShadow();
+
+  // Outline / stroke
+  el.style.webkitTextStroke = S.decos.has('outline') ? `2px ${S.textColor}` : '';
+
+  // Stamp
+  if (S.decos.has('stamp')) {
+    el.style.transform     = 'rotate(-2.5deg)';
+    el.style.border        = `3px solid ${S.textColor}`;
+    el.style.padding       = '18px 28px';
+    el.style.borderRadius  = '3px';
+    el.style.opacity       = '0.88';
+  } else {
+    el.style.transform     = '';
+    el.style.border        = '';
+    el.style.padding       = '40px';
+    el.style.borderRadius  = '';
+    el.style.opacity       = '';
+  }
+
+  // Background
+  canvas.style.background = S.bgColor;
+
+  // Hide grid dots on light backgrounds
+  const brightness = getBrightness(S.bgColor);
+  canvas.classList.toggle('light-bg', brightness > 180);
+
+  // Update meta labels
+  document.getElementById('preview-font').textContent = S.font;
+  document.getElementById('preview-tag').textContent  = S.style;
+}
+
+function getBrightness(hex) {
+  const h = hex.replace('#','');
+  if (h.length < 6) return 0;
+  const r = parseInt(h.slice(0,2),16);
+  const g = parseInt(h.slice(2,4),16);
+  const b = parseInt(h.slice(4,6),16);
+  return 0.299*r + 0.587*g + 0.114*b;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   COPY CSS
+════════════════════════════════════════════════════════════════════════ */
+
+function copyCss() {
+  const decList = [];
+  if (S.decos.has('underline')) decList.push('underline');
+  if (S.decos.has('overline'))  decList.push('overline');
+  if (S.decos.has('strike'))    decList.push('line-through');
+
+  const shadow = buildShadow();
+  const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
+
+  const lines = [
+    `/* TypeForge — ${S.font} · ${S.style} */`,
+    `@import url('${importUrl}');`,
+    ``,
+    `.text {`,
+    `  font-family: '${S.font}', sans-serif;`,
+    `  font-size: ${S.size}px;`,
+    `  font-weight: ${S.weight};`,
+    `  font-style: ${S.italic ? 'italic' : 'normal'};`,
+    `  letter-spacing: ${S.spacing}px;`,
+    `  line-height: ${S.lineHeight};`,
+    `  text-align: ${S.align};`,
+    `  color: ${S.decos.has('outline') ? 'transparent' : S.textColor};`,
+  ];
+
+  if (decList.length) lines.push(`  text-decoration: ${decList.join(' ')};`);
+  if (S.decos.has('outline')) lines.push(`  -webkit-text-stroke: 2px ${S.textColor};`);
+  if (shadow !== 'none') lines.push(`  text-shadow: ${shadow};`);
+  if (S.decos.has('stamp')) lines.push(`  transform: rotate(-2.5deg);`, `  border: 3px solid ${S.textColor};`, `  opacity: 0.88;`);
+
+  lines.push(`  background: ${S.bgColor};`, `}`);
+
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => toast('CSS copied to clipboard!'))
+    .catch(() => toast('Copy failed — try again'));
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   EXPORT PNG
+════════════════════════════════════════════════════════════════════════ */
+
+function exportPng() {
+  const canvas = document.getElementById('preview-canvas');
+  toast('Rendering PNG…');
+  html2canvas(canvas, {
+    backgroundColor: S.bgColor,
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+  }).then(c => {
+    const a = document.createElement('a');
+    a.download = `typeforge-${S.font.replace(/\s+/g,'-').toLowerCase()}.png`;
+    a.href = c.toDataURL('image/png');
+    a.click();
+    toast('PNG exported!');
+  }).catch(() => toast('Export failed'));
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   EXPORT SVG
+════════════════════════════════════════════════════════════════════════ */
+
+function exportSvg() {
+  const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
+  const W = 800, H = 400;
+  const shadow = buildShadow();
+  const filterAttr = shadow !== 'none' ? `filter="url(#ds)"` : '';
+
+  let defs = `<style>@import url('${importUrl}');</style>`;
+  if (shadow !== 'none') {
+    defs += `<filter id="ds"><feDropShadow dx="${S.shadowOff}" dy="${S.shadowOff}" stdDeviation="${S.shadowBlur/2}" flood-opacity="0.5"/></filter>`;
+  }
+
+  const decList = [];
+  if (S.decos.has('underline')) decList.push('underline');
+  if (S.decos.has('overline'))  decList.push('overline');
+  if (S.decos.has('strike'))    decList.push('line-through');
+
+  const svgText = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+  <defs>${defs}</defs>
+  <rect width="${W}" height="${H}" fill="${S.bgColor}"/>
+  <text
+    x="${W/2}" y="${H/2}"
+    dominant-baseline="middle"
+    text-anchor="middle"
+    font-family="'${S.font}', sans-serif"
+    font-weight="${S.weight}"
+    font-size="${Math.min(S.size, 120)}"
+    font-style="${S.italic ? 'italic' : 'normal'}"
+    letter-spacing="${S.spacing}"
+    fill="${S.decos.has('outline') ? 'transparent' : S.textColor}"
+    stroke="${S.decos.has('outline') ? S.textColor : 'none'}"
+    stroke-width="${S.decos.has('outline') ? 2 : 0}"
+    text-decoration="${decList.join(' ') || 'none'}"
+    ${filterAttr}
+  >${xmlEsc(S.text)}</text>
+</svg>`;
+
+  const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = `typeforge-${S.font.replace(/\s+/g,'-').toLowerCase()}.svg`;
+  a.href = url;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('SVG exported!');
+}
+
+function xmlEsc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════════════════════════════ */
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════════════════ */
+
+function init() {
+  buildStyleTags();
+  buildSwatches();
+  bindControls();
+  pickStyle(S.style);  // loads fonts + builds grid + renders
+  applyPreviewSize();
+}
+
+init();
+</script>
+</body>
+</html>
