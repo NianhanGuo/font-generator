@@ -154,6 +154,16 @@ input[type="color"]:hover{border-color:var(--accent)}
 .grad-pill.active{border-color:rgba(255,255,255,.85);box-shadow:0 0 0 2px var(--bg),0 0 0 4px rgba(255,255,255,.3)}
 .grad-none{background:var(--surface4) !important;border:2px solid var(--border-hover) !important;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0}
 
+/* ── BG Quick Row ── */
+.bg-quick-row{display:flex;gap:4px;flex-wrap:wrap}
+.bg-quick-btn{
+  padding:4px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:transparent;color:var(--text-dim);font-size:10px;font-weight:500;
+  cursor:pointer;transition:all var(--transition);white-space:nowrap;font-family:inherit;
+}
+.bg-quick-btn:hover{border-color:var(--border-hover);color:var(--text)}
+.bg-quick-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+
 /* ── BG Presets ── */
 .bg-presets{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
 .bg-preset{
@@ -483,8 +493,12 @@ kbd{display:inline-flex;align-items:center;justify-content:center;padding:2px 7p
 
     <!-- Background -->
     <div class="section">
-      <div class="sec-label">Background Preset</div>
-      <div class="bg-presets" id="bg-presets"></div>
+      <div class="sec-label">Background</div>
+      <div class="bg-quick-row" id="bg-quick-row"></div>
+      <div class="bg-presets" id="bg-presets" style="margin-top:8px"></div>
+      <div id="contrast-warning" style="display:none;margin-top:8px;padding:6px 9px;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.35);border-radius:var(--radius-sm);font-size:10px;color:#ca8a04;line-height:1.5">
+        ⚠ Low contrast — text and background are very similar in brightness.
+      </div>
     </div>
 
     <!-- Decorations -->
@@ -1239,6 +1253,45 @@ function buildGradPills() {
   });
 }
 
+const BG_QUICK = [
+  { label:'White',     color:'#ffffff', preset:'solid' },
+  { label:'Light',     color:'#f5f5f3', preset:'solid' },
+  { label:'Dark',      color:'#1a1a1a', preset:'solid' },
+  { label:'Black',     color:'#000000', preset:'solid' },
+  { label:'Navy',      color:'#1a1a2e', preset:'solid' },
+];
+
+function buildBgQuickRow() {
+  const row = document.getElementById('bg-quick-row');
+  if (!row) return;
+  row.innerHTML = '';
+  BG_QUICK.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'bg-quick-btn';
+    btn.textContent = q.label;
+    btn.title = q.color;
+    btn.setAttribute('aria-label', `Set background to ${q.label} (${q.color})`);
+    btn.addEventListener('click', () => {
+      S.bgColor  = q.color;
+      S.bgPreset = 'solid';
+      document.getElementById('bg-color').value = q.color;
+      document.querySelectorAll('.bg-quick-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.bg-preset').forEach(b => b.classList.remove('active'));
+      document.querySelector('.bg-preset')?.classList.add('active');
+      render();
+    });
+    row.appendChild(btn);
+  });
+  /* Custom button opens the color picker */
+  const customBtn = document.createElement('button');
+  customBtn.className = 'bg-quick-btn';
+  customBtn.textContent = 'Custom';
+  customBtn.setAttribute('aria-label', 'Open custom background color picker');
+  customBtn.addEventListener('click', () => document.getElementById('bg-color').click());
+  row.appendChild(customBtn);
+}
+
 function buildBgPresets() {
   const el = document.getElementById('bg-presets');
   el.innerHTML = '';
@@ -1247,17 +1300,36 @@ function buildBgPresets() {
     div.className = 'bg-preset' + (p.id === S.bgPreset ? ' active' : '');
     div.style.background = p.css || S.bgColor;
     div.title = p.label;
+    div.setAttribute('aria-label', `Background preset: ${p.label}`);
     div.addEventListener('click', () => {
       S.bgPreset = p.id;
-      if (!p.css) {
-        // solid — keep current bgColor
-      }
       document.querySelectorAll('.bg-preset').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.bg-quick-btn').forEach(b => b.classList.remove('active'));
       div.classList.add('active');
       render();
     });
     el.appendChild(div);
   });
+}
+
+function checkContrast() {
+  const warn = document.getElementById('contrast-warning');
+  if (!warn) return;
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgVal = bgPreset?.css || S.bgColor;
+  if (bgVal.startsWith('linear') || bgVal.startsWith('radial')) { warn.style.display = 'none'; return; }
+  const bgL = luminance(bgVal);
+  const fgL = luminance(S.textColor);
+  const ratio = (Math.max(bgL, fgL) + 0.05) / (Math.min(bgL, fgL) + 0.05);
+  warn.style.display = (ratio < 2.5) ? 'block' : 'none';
+}
+
+function luminance(hex) {
+  const h = hex.replace('#','');
+  if (h.length < 6) return 0;
+  const sRGB = [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]
+    .map(v => { const c = v/255; return c <= .03928 ? c/12.92 : Math.pow((c+.055)/1.055, 2.4); });
+  return .2126*sRGB[0] + .7152*sRGB[1] + .0722*sRGB[2];
 }
 
 function buildDecoGrid() {
@@ -1708,6 +1780,7 @@ function _renderOnly() {
   /* ── Meta ── */
   document.getElementById('preview-font').textContent = S.font;
   document.getElementById('preview-tag').textContent  = S.style;
+  checkContrast();
   saveState();
 }
 
@@ -2012,6 +2085,7 @@ function init() {
   buildStyleTags();
   buildSwatches();
   buildGradPills();
+  buildBgQuickRow();
   buildBgPresets();
   buildDecoGrid();
   bindControls();
