@@ -666,6 +666,66 @@ const S = {
 };
 
 /* ════════════════════════════════════════════════════════════════════════
+   PERSISTENCE — localStorage + URL hash
+════════════════════════════════════════════════════════════════════════ */
+
+const PERSIST_KEYS = ['text','style','font','weight','size','spacing','lineHeight',
+  'italic','align','textColor','bgColor','bgPreset','textGrad','decos',
+  'shadowOff','shadowBlur','previewSz'];
+
+function saveState() {
+  try {
+    const data = {};
+    PERSIST_KEYS.forEach(k => { data[k] = k === 'decos' ? [...S[k]] : S[k]; });
+    const json = JSON.stringify(data);
+    localStorage.setItem('typeforge_state', json);
+    const hash = btoa(encodeURIComponent(json));
+    if (location.hash.slice(1) !== hash) history.replaceState(null, '', '#' + hash);
+  } catch(e) { /* quota / private mode */ }
+}
+
+function loadState() {
+  try {
+    let json = null;
+    if (location.hash.length > 1) {
+      try { json = decodeURIComponent(atob(location.hash.slice(1))); } catch(e) {}
+    }
+    if (!json) json = localStorage.getItem('typeforge_state');
+    if (!json) return false;
+    const data = JSON.parse(json);
+    PERSIST_KEYS.forEach(k => {
+      if (data[k] === undefined) return;
+      S[k] = k === 'decos' ? new Set(data[k]) : data[k];
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
+function restoreUI() {
+  document.getElementById('word-input').value = S.text;
+  [['weight', S.weight, v => String(Math.round(v))],
+   ['size', S.size, v => v + 'px'],
+   ['spacing', S.spacing, v => parseFloat(v).toFixed(1) + 'px'],
+   ['lineheight', S.lineHeight, v => parseFloat(v).toFixed(2)],
+   ['shadow-offset', S.shadowOff, v => v + 'px'],
+   ['shadow-blur', S.shadowBlur, v => v + 'px']]
+  .forEach(([id, val, fmt]) => {
+    const sl = document.getElementById(id), vl = document.getElementById(id + '-val');
+    if (sl) sl.value = val;
+    if (vl) vl.textContent = fmt(val);
+  });
+  document.getElementById('italic-btn').classList.toggle('active', S.italic);
+  document.querySelectorAll('[data-align]').forEach(b =>
+    b.classList.toggle('active', b.dataset.align === S.align));
+  document.getElementById('text-color').value = S.textColor;
+  document.getElementById('bg-color').value   = S.bgColor;
+  document.querySelectorAll('.size-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.sz === S.previewSz));
+  document.getElementById('shadow-controls')
+    .classList.toggle('visible', S.decos.has('shadow') || S.decos.has('long-shadow'));
+}
+
+/* ════════════════════════════════════════════════════════════════════════
    FONT LOADING
 ════════════════════════════════════════════════════════════════════════ */
 
@@ -762,7 +822,7 @@ function buildDecoGrid() {
   el.innerHTML = '';
   DECOS.forEach(d => {
     const btn = document.createElement('button');
-    btn.className = 'deco-btn';
+    btn.className = 'deco-btn' + (S.decos.has(d.id) ? ' active' : '');
     btn.dataset.deco = d.id;
     btn.innerHTML = `<span class="deco-icon">${d.icon}</span>${d.label}`;
     btn.addEventListener('click', () => {
@@ -1181,6 +1241,7 @@ function render() {
   /* ── Meta ── */
   document.getElementById('preview-font').textContent = S.font;
   document.getElementById('preview-tag').textContent  = S.style;
+  saveState();
 }
 
 function isBright(bg) {
@@ -1343,13 +1404,23 @@ function toast(msg) {
 ════════════════════════════════════════════════════════════════════════ */
 
 function init() {
+  const restored = loadState();
   buildStyleTags();
   buildSwatches();
   buildGradPills();
   buildBgPresets();
   buildDecoGrid();
   bindControls();
-  pickStyle(S.style);
+  if (restored) {
+    const fonts = STYLES[S.style] || STYLES['Swiss / Clean'];
+    loadFonts(fonts);
+    buildFontGrid(fonts);
+    updateDiscovery(S.style);
+    restoreUI();
+    render();
+  } else {
+    pickStyle(S.style);
+  }
   applyPreviewSize();
 }
 
