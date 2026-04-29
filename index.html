@@ -283,6 +283,54 @@ input[type="color"]:hover{border-color:var(--accent)}
 .famous-note strong{color:var(--text-dim);font-weight:600}
 .search-empty{text-align:center;padding:28px 14px;color:var(--text-muted);font-size:12px;line-height:1.7}
 
+/* ── Export Panel ── */
+.export-overlay{position:fixed;inset:0;z-index:900;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.export-panel{
+  background:var(--surface);border:1px solid var(--border-hover);border-radius:12px;
+  width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 64px);
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 32px 80px rgba(0,0,0,.7);
+}
+.export-panel__header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.export-panel__title{font-size:13px;font-weight:700;letter-spacing:-.3px}
+.export-panel__close{
+  width:26px;height:26px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);color:var(--text-muted);font-size:13px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);
+}
+.export-panel__close:hover{border-color:var(--border-hover);color:var(--text)}
+.export-panel__tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 18px;gap:2px}
+.export-panel__tab{
+  padding:9px 14px;border:none;background:transparent;color:var(--text-muted);
+  font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:all var(--transition);font-family:inherit;
+}
+.export-panel__tab:hover{color:var(--text-dim)}
+.export-panel__tab.active{color:var(--accent-light);border-bottom-color:var(--accent)}
+.export-panel__body{flex:1;overflow:auto;padding:16px 18px}
+.export-panel__code{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  font-size:12px;line-height:1.65;color:#c9d1d9;overflow-x:auto;white-space:pre;
+  min-height:180px;
+}
+.export-panel__footer{
+  padding:12px 18px;border-top:1px solid var(--border);display:flex;
+  align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0;
+}
+.export-panel__copy{
+  padding:7px 20px;border-radius:var(--radius-sm);border:none;
+  background:var(--accent);color:#fff;font-size:12px;font-weight:600;
+  cursor:pointer;transition:background var(--transition);font-family:inherit;
+}
+.export-panel__copy:hover{background:#6d28d9}
+.export-panel__copy.copied{background:#16a34a}
+.export-panel__hint{font-size:10px;color:var(--text-muted)}
+
 /* ── Toast ── */
 #toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);
@@ -421,7 +469,7 @@ input[type="color"]:hover{border-color:var(--accent)}
       <button class="size-btn" data-sz="Full">Full</button>
     </div>
     <div class="bar-actions">
-      <button class="action-btn" id="btn-css">Copy CSS</button>
+      <button class="action-btn" id="btn-css" aria-label="Open export code panel">Export Code</button>
       <button class="action-btn" id="btn-svg">SVG</button>
       <button class="action-btn primary" id="btn-png">PNG</button>
     </div>
@@ -448,6 +496,29 @@ input[type="color"]:hover{border-color:var(--accent)}
 </div>
 
 </div><!-- /app -->
+
+<!-- ══ EXPORT PANEL MODAL ══════════════════════════════════════════════ -->
+<div id="export-overlay" class="export-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Export code panel">
+  <div class="export-panel">
+    <div class="export-panel__header">
+      <span class="export-panel__title">Export Code</span>
+      <button class="export-panel__close" id="export-close" aria-label="Close export panel">✕</button>
+    </div>
+    <div class="export-panel__tabs" role="tablist">
+      <button class="export-panel__tab active" data-export-tab="css" role="tab" aria-selected="true">CSS</button>
+      <button class="export-panel__tab" data-export-tab="variables" role="tab" aria-selected="false">CSS Variables</button>
+      <button class="export-panel__tab" data-export-tab="tailwind" role="tab" aria-selected="false">Tailwind</button>
+    </div>
+    <div class="export-panel__body">
+      <pre class="export-panel__code" id="export-code" aria-label="Generated code"></pre>
+    </div>
+    <div class="export-panel__footer">
+      <span class="export-panel__hint" id="export-hint"></span>
+      <button class="export-panel__copy" id="export-copy-btn" aria-label="Copy code to clipboard">Copy</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1078,7 +1149,7 @@ function bindControls() {
     });
   });
 
-  document.getElementById('btn-css').addEventListener('click', copyCss);
+  document.getElementById('btn-css').addEventListener('click', openExportPanel);
   document.getElementById('btn-png').addEventListener('click', exportPng);
   document.getElementById('btn-svg').addEventListener('click', exportSvg);
 
@@ -1257,58 +1328,195 @@ function escHtml(s) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   COPY CSS
+   EXPORT PANEL — T3
 ════════════════════════════════════════════════════════════════════════ */
 
-function copyCss() {
+let exportActiveTab = 'css';
+
+function fontCategory() {
+  const f = FONT_DB.find(x => x.name === S.font);
+  if (!f) return 'sans-serif';
+  const m = { Grotesque:'sans-serif', Geometric:'sans-serif', Serif:'serif',
+    'Slab Serif':'serif', Display:'sans-serif', Retro:'sans-serif',
+    Handwriting:'cursive', Script:'cursive', Monospace:'monospace',
+    Techno:'sans-serif' };
+  return m[f.cat] || 'sans-serif';
+}
+
+function buildExportCss() {
   const decList = [];
   if (S.decos.has('underline')) decList.push('underline');
   if (S.decos.has('overline'))  decList.push('overline');
   if (S.decos.has('strike'))    decList.push('line-through');
-
-  const shadow  = buildTextShadow();
-  const grad    = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
-  const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
-
+  const shadow   = buildTextShadow();
+  const grad     = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
   const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
   const bgValue  = bgPreset?.css || S.bgColor;
-
+  const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:ital,wght@0,${S.weight}${S.italic?`;1,${S.weight}`:''}& display=swap`;
+  const cat = fontCategory();
   const lines = [
-    `/* TypeForge — ${S.font} · ${S.style} */`,
-    `@import url('${importUrl}');`,
+    `/* TypeForge Export — ${S.font} · ${S.style} */`,
+    `@import url('${importUrl.replace(/ /g,'')}');`,
     ``,
-    `.text {`,
-    `  font-family: '${S.font}', sans-serif;`,
-    `  font-size: ${S.size}px;`,
+    `.my-text {`,
+    `  font-family: '${S.font}', ${cat};`,
     `  font-weight: ${S.weight};`,
-    `  font-style: ${S.italic ? 'italic' : 'normal'};`,
-    `  letter-spacing: ${S.spacing}px;`,
+    `  font-size: ${S.size}px;`,
     `  line-height: ${S.lineHeight};`,
+    `  letter-spacing: ${S.spacing}px;`,
     `  text-align: ${S.align};`,
   ];
-
+  if (S.italic) lines.push(`  font-style: italic;`);
   if (grad?.css) {
-    lines.push(
-      `  background: ${grad.css};`,
+    lines.push(`  background: ${grad.css};`,
       `  -webkit-background-clip: text;`,
       `  -webkit-text-fill-color: transparent;`,
-      `  background-clip: text;`,
-    );
+      `  background-clip: text;`);
   } else {
     lines.push(`  color: ${S.decos.has('outline') ? 'transparent' : S.textColor};`);
     if (S.decos.has('outline')) lines.push(`  -webkit-text-stroke: 2px ${S.textColor};`);
   }
-
   if (decList.length) lines.push(`  text-decoration: ${decList.join(' ')};`);
   if (shadow !== 'none') lines.push(`  text-shadow: ${shadow};`);
   if (S.decos.has('stamp')) lines.push(`  transform: rotate(-2.5deg);`, `  border: 3px solid ${S.textColor};`, `  opacity: 0.88;`);
-  lines.push(`  background-color: ${bgValue};`);
-  lines.push(`}`);
-
-  navigator.clipboard.writeText(lines.join('\n'))
-    .then(() => toast('CSS copied!'))
-    .catch(() => toast('Copy failed'));
+  lines.push(`  background-color: ${bgValue};`, `}`);
+  return lines.join('\n');
 }
+
+function buildExportVariables() {
+  const grad     = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgValue  = bgPreset?.css || S.bgColor;
+  const cat      = fontCategory();
+  const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
+  return [
+    `/* TypeForge Export — CSS Variables */`,
+    `@import url('${importUrl}');`,
+    ``,
+    `:root {`,
+    `  --tf-font-family:    '${S.font}', ${cat};`,
+    `  --tf-font-weight:    ${S.weight};`,
+    `  --tf-font-size:      ${S.size}px;`,
+    `  --tf-line-height:    ${S.lineHeight};`,
+    `  --tf-letter-spacing: ${S.spacing}px;`,
+    `  --tf-text-align:     ${S.align};`,
+    `  --tf-text-color:     ${S.textColor};`,
+    `  --tf-bg-color:       ${bgValue};`,
+    `}`,
+    ``,
+    `.my-text {`,
+    `  font-family:    var(--tf-font-family);`,
+    `  font-weight:    var(--tf-font-weight);`,
+    `  font-size:      var(--tf-font-size);`,
+    `  line-height:    var(--tf-line-height);`,
+    `  letter-spacing: var(--tf-letter-spacing);`,
+    `  text-align:     var(--tf-text-align);`,
+    `  color:          var(--tf-text-color);`,
+    `  background-color: var(--tf-bg-color);`,
+    ...(grad?.css ? [
+      `  /* gradient text */`,
+      `  background: ${grad.css};`,
+      `  -webkit-background-clip: text;`,
+      `  -webkit-text-fill-color: transparent;`,
+      `  background-clip: text;`] : []),
+    `}`,
+  ].join('\n');
+}
+
+function buildExportTailwind() {
+  const grad     = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgValue  = bgPreset?.css || S.bgColor;
+  const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
+  const weightMap = {100:'thin',200:'extralight',300:'light',400:'normal',500:'medium',600:'semibold',700:'bold',800:'extrabold',900:'black'};
+  const alignMap  = {left:'text-left',center:'text-center',right:'text-right'};
+  const w = weightMap[S.weight] || `[${S.weight}]`;
+  const a = alignMap[S.align]   || `text-${S.align}`;
+  const classes = [
+    `font-['${S.font.replace(/ /g,'_')}']`,
+    `font-${w}`,
+    `text-[${S.size}px]`,
+    `leading-[${S.lineHeight}]`,
+    S.spacing !== 0 ? `tracking-[${S.spacing}px]` : null,
+    a,
+    !grad?.css ? `text-[${S.textColor}]` : null,
+    S.italic ? 'italic' : null,
+    S.decos.has('underline') ? 'underline' : null,
+    S.decos.has('strike') ? 'line-through' : null,
+  ].filter(Boolean).join(' ');
+  return [
+    `<!-- Tailwind v3 — TypeForge Export -->`,
+    `<!-- Add font import to your <head>: -->`,
+    `<!-- <link href="${importUrl}" rel="stylesheet"> -->`,
+    ``,
+    `<p class="${classes}">`,
+    `  Your text here`,
+    `</p>`,
+    ...(grad?.css ? [
+      ``,
+      `<!-- Gradient text requires custom CSS: -->`,
+      `<style>`,
+      `.gradient-text {`,
+      `  background: ${grad.css};`,
+      `  -webkit-background-clip: text;`,
+      `  -webkit-text-fill-color: transparent;`,
+      `  background-clip: text;`,
+      `}`,
+      `</style>`] : []),
+  ].join('\n');
+}
+
+function refreshExportCode() {
+  const pre = document.getElementById('export-code');
+  const hint = document.getElementById('export-hint');
+  if (!pre) return;
+  if (exportActiveTab === 'css')       { pre.textContent = buildExportCss();       if(hint) hint.textContent = 'Paste directly into any stylesheet'; }
+  if (exportActiveTab === 'variables') { pre.textContent = buildExportVariables(); if(hint) hint.textContent = 'Override variables per component'; }
+  if (exportActiveTab === 'tailwind')  { pre.textContent = buildExportTailwind();  if(hint) hint.textContent = 'Requires Tailwind v3 + arbitrary values enabled'; }
+}
+
+function openExportPanel() {
+  refreshExportCode();
+  document.getElementById('export-overlay').style.display = 'flex';
+}
+
+function closeExportPanel() {
+  document.getElementById('export-overlay').style.display = 'none';
+}
+
+function bindExportPanel() {
+  document.getElementById('export-close').addEventListener('click', closeExportPanel);
+  document.getElementById('export-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeExportPanel();
+  });
+  document.querySelectorAll('[data-export-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      exportActiveTab = btn.dataset.exportTab;
+      document.querySelectorAll('[data-export-tab]').forEach(b => {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+      });
+      refreshExportCode();
+    });
+  });
+  const copyBtn = document.getElementById('export-copy-btn');
+  copyBtn.addEventListener('click', () => {
+    const code = document.getElementById('export-code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+    }).catch(() => toast('Copy failed'));
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('export-overlay').style.display !== 'none') {
+      closeExportPanel();
+    }
+  });
+}
+
+/* legacy alias kept for SVG/PNG exports */
+function copyCss() { openExportPanel(); }
 
 /* ════════════════════════════════════════════════════════════════════════
    EXPORT PNG
@@ -1422,6 +1630,7 @@ function init() {
     pickStyle(S.style);
   }
   applyPreviewSize();
+  bindExportPanel();
 }
 
 init();
