@@ -3,651 +3,304 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TypeForge — Font Style Generator</title>
+<title>TypeForge — Professional Font Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root {
-  --bg: #0f0f0f;
-  --surface: #161616;
-  --surface2: #1e1e1e;
-  --surface3: #252525;
-  --border: #272727;
-  --border-hover: #3a3a3a;
-  --text: #f0f0f0;
-  --text-dim: #a0a0a0;
-  --text-muted: #555;
-  --accent: #6e56cf;
-  --accent-light: #9b8af4;
-  --accent-dim: rgba(110,86,207,0.15);
-  --accent-glow: rgba(110,86,207,0.3);
+  --bg: #0a0a0c;
+  --surface: #111114;
+  --surface2: #17171b;
+  --surface3: #1f1f24;
+  --surface4: #27272d;
+  --border: #252529;
+  --border-hover: #3a3a42;
+  --text: #f0f0f2;
+  --text-dim: #9898a8;
+  --text-muted: #4a4a58;
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-dim: rgba(124,58,237,0.13);
+  --magenta: #d946ef;
+  --magenta-dim: rgba(217,70,239,0.12);
   --radius: 8px;
   --radius-sm: 5px;
   --radius-xs: 3px;
-  --panel-w: 300px;
-  --transition: 120ms ease;
-}
-
-*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html,body {
-  height: 100%;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 13px;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── Scrollbar ──────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
-
-/* ── Layout ─────────────────────────────────────────────────────────────── */
-.app {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* ── Left Panel ─────────────────────────────────────────────────────────── */
-.panel {
-  width: var(--panel-w);
-  min-width: 260px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.panel-header {
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.panel-header h1 {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-  color: var(--text);
-}
-
-.panel-header .tagline {
-  font-size: 11px;
-  color: var(--text-muted);
-  letter-spacing: 0;
-}
-
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.section {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.section:last-child {
-  border-bottom: none;
-}
-
-.sec-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-
-/* ── Text Input ─────────────────────────────────────────────────────────── */
-#word-input {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 9px 12px;
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 500;
-  outline: none;
-  letter-spacing: -0.2px;
-  transition: border-color var(--transition), box-shadow var(--transition);
-  caret-color: var(--accent-light);
-}
-
-#word-input::placeholder { color: var(--text-muted); }
-
-#word-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim);
-}
-
-/* ── Style Tags ─────────────────────────────────────────────────────────── */
-.style-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.style-tag {
-  padding: 4px 10px;
-  border-radius: 100px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  white-space: nowrap;
-  letter-spacing: -0.1px;
-}
-
-.style-tag:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-  background: var(--surface2);
-}
-
-.style-tag.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent-light);
-}
-
-/* ── Font Grid ──────────────────────────────────────────────────────────── */
-.font-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-}
-
-.font-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px;
-  cursor: pointer;
-  transition: all var(--transition);
-  overflow: hidden;
-  min-height: 68px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
-  position: relative;
-}
-
-.font-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  opacity: 0;
-  background: radial-gradient(circle at 50% 40%, var(--accent-dim) 0%, transparent 70%);
-  transition: opacity var(--transition);
-}
-
-.font-card:hover {
-  border-color: var(--border-hover);
-  background: var(--surface3);
-}
-
-.font-card.active {
-  border-color: var(--accent);
-  background: var(--surface3);
-}
-
-.font-card.active::after { opacity: 1; }
-
-.card-preview {
-  font-size: 22px;
-  line-height: 1.1;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  position: relative;
-  z-index: 1;
-}
-
-.card-name {
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0.02em;
-  position: relative;
-  z-index: 1;
-}
-
-.font-card.active .card-name {
-  color: var(--accent-light);
-}
-
-/* ── Sliders ────────────────────────────────────────────────────────────── */
-.slider-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 9px;
-}
-
-.slider-row:last-of-type { margin-bottom: 0; }
-
-.slider-label {
-  font-size: 11px;
-  color: var(--text-dim);
-  width: 76px;
-  flex-shrink: 0;
-}
-
-.slider-wrap { flex: 1; }
-
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 3px;
-  background: var(--border-hover);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 13px;
-  height: 13px;
-  background: var(--accent-light);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 0 3px rgba(155,138,244,0.2);
-  transition: transform var(--transition), box-shadow var(--transition);
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 5px rgba(155,138,244,0.25);
-}
-
-.slider-val {
-  font-size: 10px;
-  color: var(--text-muted);
-  width: 34px;
-  text-align: right;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Toggle Row ─────────────────────────────────────────────────────────── */
-.toggle-row {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.toggle-btn {
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.toggle-btn:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-}
-
-.toggle-btn.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent-light);
-}
-
-/* ── Swatches ───────────────────────────────────────────────────────────── */
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-.swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  border: 1.5px solid rgba(255,255,255,0.06);
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-  flex-shrink: 0;
-}
-
-.swatch:hover { transform: scale(1.18); }
-
-.swatch.active {
-  border-color: rgba(255,255,255,0.7);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px rgba(255,255,255,0.4);
-}
-
-.color-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.color-pick {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 1;
-  min-width: 80px;
-}
-
-.color-pick label {
-  font-size: 10px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-input[type="color"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius-xs);
-  background: transparent;
-  cursor: pointer;
-  padding: 1px;
-  transition: border-color var(--transition);
-}
-
-input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
-
-input[type="color"]:hover { border-color: var(--accent); }
-
-.invert-btn {
-  padding: 5px 9px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-
-.invert-btn:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-  background: var(--surface3);
-}
-
-/* ── Decorations ────────────────────────────────────────────────────────── */
-.deco-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-}
-
-.deco-btn {
-  padding: 7px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.deco-btn .deco-icon {
-  font-size: 13px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.deco-btn:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-  background: var(--surface3);
-}
-
-.deco-btn.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent-light);
-}
-
-.shadow-controls {
-  margin-top: 10px;
-  display: none;
-}
-
-.shadow-controls.visible { display: block; }
-
-/* ── Right Panel ────────────────────────────────────────────────────────── */
-.preview-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.preview-bar {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-  background: var(--surface);
-}
-
-.preview-meta {
-  flex: 1;
-  min-width: 0;
-}
-
-.preview-font {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.preview-tag {
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-
-.size-btns {
-  display: flex;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.size-btn {
-  padding: 5px 9px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  border-right: 1px solid var(--border);
-}
-
-.size-btn:last-child { border-right: none; }
-
-.size-btn:hover { color: var(--text); background: var(--surface3); }
-
-.size-btn.active {
-  background: var(--accent-dim);
-  color: var(--accent-light);
-}
-
-.bar-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.action-btn {
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text-dim);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-
-.action-btn:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-  background: var(--surface3);
-}
-
-.action-btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.action-btn.primary:hover {
-  background: #7d64de;
-  border-color: #7d64de;
-}
-
-/* ── Preview Canvas ─────────────────────────────────────────────────────── */
-.preview-canvas {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-  transition: background 0.1s;
-}
-
-.preview-canvas-inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  transition: max-width 0.2s ease;
-  position: relative;
-}
-
-#preview-text {
-  max-width: 90%;
-  word-break: break-word;
-  padding: 40px;
-  transition: font-family 0.1s, color 0.1s;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* ── Grid overlay (subtle) ──────────────────────────────────────────────── */
-.preview-canvas::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.2s;
-}
-
-.preview-canvas-inner { z-index: 1; }
-
-/* Hide grid when bg is light */
-.preview-canvas.light-bg::before {
-  opacity: 0;
-}
-
-/* ── Toast ──────────────────────────────────────────────────────────────── */
-#toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: var(--surface3);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius);
-  padding: 9px 16px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1000;
-  transition: opacity 0.18s, transform 0.18s;
-  white-space: nowrap;
-}
-
-#toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ── Divider ────────────────────────────────────────────────────────────── */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 8px 0;
-}
-
-/* ── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 700px) {
-  html, body { overflow: auto; height: auto; }
-  .app { flex-direction: column; height: auto; }
-  .panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-  .panel-body { overflow: visible; max-height: none; }
-  .preview-panel { min-height: 60vh; }
-  .preview-bar { flex-wrap: wrap; }
+  --left-w: 300px;
+  --right-w: 290px;
+  --transition: 110ms ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hover);border-radius:2px}
+
+/* ── Layout ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.panel{display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.left-panel{width:var(--left-w);border-right:1px solid var(--border)}
+.right-panel{width:var(--right-w);border-left:1px solid var(--border)}
+.panel-body{flex:1;overflow-y:auto;overflow-x:hidden}
+
+/* ── Panel Header ── */
+.panel-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand-name{
+  font-size:15px;font-weight:900;letter-spacing:-0.6px;
+  background:linear-gradient(130deg,#c084fc,#e879f9,#f472b6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.brand-tag{font-size:10px;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;font-weight:500}
+.right-header-title{font-size:12px;font-weight:600;color:var(--text-dim);letter-spacing:-.2px}
+
+/* ── Sections ── */
+.section{padding:13px 16px;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.sec-label{
+  font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:7px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Text Input ── */
+#word-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:9px 12px;color:var(--text);font-size:15px;font-weight:500;outline:none;
+  letter-spacing:-.2px;transition:border-color var(--transition),box-shadow var(--transition);
+  caret-color:var(--accent-light);font-family:inherit;
+}
+#word-input::placeholder{color:var(--text-muted)}
+#word-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+
+/* ── Style Tags ── */
+.style-tags{display:flex;flex-wrap:wrap;gap:5px}
+.style-tag{
+  padding:4px 10px;border-radius:100px;border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);font-size:11px;font-weight:500;cursor:pointer;
+  transition:all var(--transition);white-space:nowrap;letter-spacing:-.1px;
+}
+.style-tag:hover{border-color:var(--border-hover);color:var(--text);background:var(--surface2)}
+.style-tag.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+
+/* ── Font Grid ── */
+.font-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.font-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px;cursor:pointer;transition:all var(--transition);overflow:hidden;
+  min-height:70px;display:flex;flex-direction:column;justify-content:space-between;gap:5px;
+}
+.font-card:hover{border-color:var(--border-hover);background:var(--surface3);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.font-card.active{border-color:var(--accent);background:var(--surface3);box-shadow:0 0 0 1px var(--accent),inset 0 0 20px var(--accent-dim)}
+.card-preview{font-size:24px;line-height:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-name{font-size:9px;font-weight:500;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.02em}
+.font-card.active .card-name{color:var(--accent-light)}
+
+/* ── Sliders ── */
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.slider-row:last-of-type{margin-bottom:0}
+.slider-label{font-size:11px;color:var(--text-dim);width:80px;flex-shrink:0}
+.slider-wrap{flex:1}
+input[type="range"]{
+  -webkit-appearance:none;appearance:none;width:100%;height:3px;
+  background:var(--surface4);border-radius:2px;outline:none;cursor:pointer;
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;background:var(--accent-light);
+  border-radius:50%;cursor:pointer;box-shadow:0 0 0 3px rgba(167,139,250,.2);
+  transition:transform var(--transition),box-shadow var(--transition);
+}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.25);box-shadow:0 0 0 5px rgba(167,139,250,.25)}
+.slider-val{font-size:10px;color:var(--text-muted);width:38px;text-align:right;flex-shrink:0;font-feature-settings:'tnum'}
+
+/* ── Toggles ── */
+.toggle-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:9px}
+.toggle-btn{
+  padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);color:var(--text-dim);font-size:11px;font-weight:500;
+  cursor:pointer;transition:all var(--transition);
+}
+.toggle-btn:hover{border-color:var(--border-hover);color:var(--text)}
+.toggle-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+
+/* ── Swatches ── */
+.swatches{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.swatch{
+  width:20px;height:20px;border-radius:var(--radius-xs);cursor:pointer;
+  border:1.5px solid rgba(255,255,255,.06);
+  transition:transform var(--transition),box-shadow var(--transition),border-color var(--transition);flex-shrink:0;
+}
+.swatch:hover{transform:scale(1.2)}
+.swatch.active{border-color:rgba(255,255,255,.8);box-shadow:0 0 0 2px var(--bg),0 0 0 4px rgba(255,255,255,.3)}
+.color-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.color-pick{display:flex;align-items:center;gap:5px;flex:1;min-width:70px}
+.color-pick label{font-size:10px;color:var(--text-muted);white-space:nowrap}
+input[type="color"]{-webkit-appearance:none;width:26px;height:26px;border:1px solid var(--border-hover);border-radius:var(--radius-xs);background:transparent;cursor:pointer;padding:1px}
+input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+input[type="color"]::-webkit-color-swatch{border:none;border-radius:2px}
+input[type="color"]:hover{border-color:var(--accent)}
+.invert-btn{padding:5px 9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:11px;cursor:pointer;transition:all var(--transition);white-space:nowrap}
+.invert-btn:hover{border-color:var(--border-hover);color:var(--text)}
+
+/* ── Gradient Picker ── */
+.grad-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.grad-pill{
+  width:26px;height:26px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;
+  transition:transform var(--transition),box-shadow var(--transition),border-color var(--transition);flex-shrink:0;
+}
+.grad-pill:hover{transform:scale(1.18)}
+.grad-pill.active{border-color:rgba(255,255,255,.85);box-shadow:0 0 0 2px var(--bg),0 0 0 4px rgba(255,255,255,.3)}
+.grad-none{background:var(--surface4) !important;border:2px solid var(--border-hover) !important;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:0}
+
+/* ── BG Presets ── */
+.bg-presets{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.bg-preset{
+  width:34px;height:22px;border-radius:var(--radius-xs);cursor:pointer;
+  border:1.5px solid rgba(255,255,255,.06);
+  transition:transform var(--transition),box-shadow var(--transition),border-color var(--transition);flex-shrink:0;
+}
+.bg-preset:hover{transform:scale(1.1)}
+.bg-preset.active{border-color:rgba(255,255,255,.75);box-shadow:0 0 0 2px var(--bg),0 0 0 3px rgba(255,255,255,.25)}
+
+/* ── Decorations ── */
+.deco-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.deco-btn{
+  padding:7px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);color:var(--text-dim);font-size:11px;font-weight:500;
+  cursor:pointer;transition:all var(--transition);text-align:left;
+  display:flex;align-items:center;gap:5px;
+}
+.deco-icon{font-size:12px;line-height:1;flex-shrink:0;opacity:.65}
+.deco-btn:hover{border-color:var(--border-hover);color:var(--text);background:var(--surface3)}
+.deco-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+.shadow-controls{margin-top:10px;display:none}
+.shadow-controls.visible{display:block}
+
+/* ── Preview Panel ── */
+.preview-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.preview-bar{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--surface);
+}
+.preview-meta{flex:1;min-width:0}
+.preview-font{font-size:13px;font-weight:600;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-tag{font-size:10px;color:var(--text-muted);margin-top:1px}
+.size-btns{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.size-btn{padding:5px 9px;border:none;background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all var(--transition);border-right:1px solid var(--border)}
+.size-btn:last-child{border-right:none}
+.size-btn:hover{color:var(--text);background:var(--surface3)}
+.size-btn.active{background:var(--accent-dim);color:var(--accent-light)}
+.bar-actions{display:flex;gap:5px}
+.action-btn{
+  padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface2);color:var(--text-dim);font-size:11px;font-weight:500;
+  cursor:pointer;transition:all var(--transition);white-space:nowrap;
+}
+.action-btn:hover{border-color:var(--border-hover);color:var(--text);background:var(--surface3)}
+.action-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.action-btn.primary:hover{background:#6d28d9;border-color:#6d28d9}
+
+/* ── Canvas ── */
+.preview-canvas{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;transition:background .12s}
+.preview-canvas::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.013) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.013) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.preview-canvas.light-bg::before{opacity:0}
+.preview-canvas-inner{display:flex;align-items:center;justify-content:center;width:100%;height:100%;transition:max-width .2s ease;position:relative;z-index:1}
+#preview-text{max-width:90%;word-break:break-word;padding:40px;pointer-events:none;user-select:none;transition:font-family .1s}
+
+/* ── Glitch effect ── */
+@keyframes glitch1{
+  0%,100%{clip-path:inset(0 0 88% 0);transform:translate(-4px,0);color:#ff006e}
+  25%{clip-path:inset(15% 0 55% 0);transform:translate(3px,0);color:#ff006e}
+  50%{clip-path:inset(60% 0 10% 0);transform:translate(-3px,0);color:#ff006e}
+  75%{clip-path:inset(35% 0 40% 0);transform:translate(2px,0);color:#ff006e}
+}
+@keyframes glitch2{
+  0%,100%{clip-path:inset(75% 0 0% 0);transform:translate(4px,0);color:#00f5ff}
+  25%{clip-path:inset(5% 0 75% 0);transform:translate(-3px,0);color:#00f5ff}
+  50%{clip-path:inset(45% 0 25% 0);transform:translate(3px,0);color:#00f5ff}
+  75%{clip-path:inset(20% 0 60% 0);transform:translate(-2px,0);color:#00f5ff}
+}
+.glitch-active{position:relative;display:inline-block}
+.glitch-active::before,.glitch-active::after{
+  content:attr(data-text);position:absolute;inset:0;
+  font-family:inherit;font-size:inherit;font-weight:inherit;
+  letter-spacing:inherit;line-height:inherit;font-style:inherit;
+  text-align:inherit;width:100%;
+}
+.glitch-active::before{animation:glitch1 .75s infinite steps(1)}
+.glitch-active::after{animation:glitch2 .75s infinite steps(1) .12s}
+
+/* ── Right Panel — Discovery ── */
+.discover-search{padding:11px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.search-wrap{position:relative}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;pointer-events:none}
+#font-search{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:8px 10px 8px 30px;color:var(--text);font-size:12px;outline:none;
+  transition:border-color var(--transition),box-shadow var(--transition);font-family:inherit;
+}
+#font-search::placeholder{color:var(--text-muted)}
+#font-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.discover-body{flex:1;overflow-y:auto}
+.discover-section{padding:11px 14px;border-bottom:1px solid var(--border)}
+.discover-section:last-child{border-bottom:none}
+.discover-label{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.discover-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Ref Cards ── */
+.ref-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 11px;margin-bottom:6px;transition:all var(--transition);
+}
+.ref-card:last-child{margin-bottom:0}
+.ref-card:hover{border-color:var(--border-hover);background:var(--surface3)}
+.ref-preview{font-size:28px;line-height:1;color:var(--text);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ref-meta{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.ref-name{font-size:11px;font-weight:600;color:var(--text-dim);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ref-tag{font-size:9px;color:var(--text-muted);background:var(--surface4);border:1px solid var(--border);border-radius:3px;padding:1px 5px;white-space:nowrap}
+.ref-vibe{font-size:10px;color:var(--text-muted);margin-bottom:7px;font-style:italic;line-height:1.4}
+.ref-actions{display:flex;gap:4px}
+.ref-btn{
+  padding:4px 9px;border-radius:var(--radius-xs);border:1px solid var(--border);
+  background:var(--surface3);color:var(--text-dim);font-size:10px;font-weight:500;
+  cursor:pointer;transition:all var(--transition);text-decoration:none;
+  display:inline-flex;align-items:center;gap:3px;
+}
+.ref-btn:hover{border-color:var(--border-hover);color:var(--text)}
+.try-btn:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+.view-btn:hover{background:var(--magenta-dim);border-color:var(--magenta);color:var(--magenta)}
+.famous-note{
+  margin-top:9px;padding:8px 10px;background:var(--surface3);border-radius:var(--radius-sm);
+  border-left:2px solid var(--border-hover);
+}
+.famous-note p{font-size:10px;color:var(--text-muted);line-height:1.6}
+.famous-note strong{color:var(--text-dim);font-weight:600}
+.search-empty{text-align:center;padding:28px 14px;color:var(--text-muted);font-size:12px;line-height:1.7}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:var(--surface4);border:1px solid var(--border-hover);border-radius:var(--radius);
+  padding:9px 16px;font-size:12px;font-weight:500;color:var(--text);
+  opacity:0;pointer-events:none;z-index:1000;transition:opacity .18s,transform .18s;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Responsive */
+@media(max-width:1000px){:root{--right-w:260px}}
+@media(max-width:800px){.right-panel{display:none}}
+@media(max-width:700px){
+  html,body{overflow:auto;height:auto}
+  .app{flex-direction:column;height:auto}
+  .left-panel{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+  .panel-body{overflow:visible;max-height:none}
+  .preview-panel{min-height:60vh}
 }
 </style>
 </head>
@@ -655,148 +308,146 @@ input[type="color"]:hover { border-color: var(--accent); }
 
 <div class="app">
 
-  <!-- ══ LEFT PANEL ══════════════════════════════════════════════════════ -->
-  <div class="panel">
+<!-- ══ LEFT PANEL ═══════════════════════════════════════════════════════ -->
+<div class="panel left-panel">
+  <div class="panel-header">
+    <div class="brand">
+      <span class="brand-name">TypeForge</span>
+      <span class="brand-tag">Font Studio</span>
+    </div>
+  </div>
+  <div class="panel-body">
 
-    <div class="panel-header">
-      <h1>TypeForge</h1>
-      <span class="tagline">Font Generator</span>
+    <!-- Text -->
+    <div class="section">
+      <div class="sec-label">Text</div>
+      <input type="text" id="word-input" placeholder="Type something…" value="Hello World" autocomplete="off" spellcheck="false">
     </div>
 
-    <div class="panel-body">
+    <!-- Style -->
+    <div class="section">
+      <div class="sec-label">Style</div>
+      <div class="style-tags" id="style-tags"></div>
+    </div>
 
-      <!-- Text -->
-      <div class="section">
-        <div class="sec-label">Text</div>
-        <input type="text" id="word-input" placeholder="Type something…" value="Hello World" autocomplete="off" spellcheck="false" />
+    <!-- Fonts -->
+    <div class="section">
+      <div class="sec-label">Fonts</div>
+      <div class="font-grid" id="font-grid"></div>
+    </div>
+
+    <!-- Typography -->
+    <div class="section">
+      <div class="sec-label">Typography</div>
+      <div class="slider-row">
+        <span class="slider-label">Weight</span>
+        <div class="slider-wrap"><input type="range" id="weight" min="100" max="900" step="100" value="400"></div>
+        <span class="slider-val" id="weight-val">400</span>
       </div>
-
-      <!-- Style -->
-      <div class="section">
-        <div class="sec-label">Style</div>
-        <div class="style-tags" id="style-tags"></div>
+      <div class="slider-row">
+        <span class="slider-label">Size</span>
+        <div class="slider-wrap"><input type="range" id="size" min="16" max="220" step="1" value="72"></div>
+        <span class="slider-val" id="size-val">72px</span>
       </div>
-
-      <!-- Fonts -->
-      <div class="section">
-        <div class="sec-label">Fonts</div>
-        <div class="font-grid" id="font-grid"></div>
+      <div class="slider-row">
+        <span class="slider-label">Spacing</span>
+        <div class="slider-wrap"><input type="range" id="spacing" min="-10" max="60" step="0.5" value="0"></div>
+        <span class="slider-val" id="spacing-val">0px</span>
       </div>
-
-      <!-- Typography -->
-      <div class="section">
-        <div class="sec-label">Typography</div>
-
-        <div class="slider-row">
-          <span class="slider-label">Weight</span>
-          <div class="slider-wrap"><input type="range" id="weight" min="100" max="900" step="100" value="400"></div>
-          <span class="slider-val" id="weight-val">400</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Size</span>
-          <div class="slider-wrap"><input type="range" id="size" min="20" max="200" step="1" value="72"></div>
-          <span class="slider-val" id="size-val">72px</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Spacing</span>
-          <div class="slider-wrap"><input type="range" id="spacing" min="-10" max="50" step="0.5" value="0"></div>
-          <span class="slider-val" id="spacing-val">0px</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Line Height</span>
-          <div class="slider-wrap"><input type="range" id="lineheight" min="0.8" max="3.0" step="0.05" value="1.2"></div>
-          <span class="slider-val" id="lineheight-val">1.20</span>
-        </div>
-
-        <div class="toggle-row">
-          <button class="toggle-btn" id="italic-btn" title="Toggle italic">Italic</button>
-          <button class="toggle-btn active" data-align="left">Left</button>
-          <button class="toggle-btn" data-align="center">Center</button>
-          <button class="toggle-btn" data-align="right">Right</button>
-        </div>
+      <div class="slider-row">
+        <span class="slider-label">Line Height</span>
+        <div class="slider-wrap"><input type="range" id="lineheight" min="0.7" max="3.5" step="0.05" value="1.2"></div>
+        <span class="slider-val" id="lineheight-val">1.20</span>
       </div>
-
-      <!-- Color -->
-      <div class="section">
-        <div class="sec-label">Color</div>
-        <div class="swatches" id="swatches"></div>
-        <div class="color-row">
-          <div class="color-pick">
-            <label>Text</label>
-            <input type="color" id="text-color" value="#ffffff">
-          </div>
-          <div class="color-pick">
-            <label>BG</label>
-            <input type="color" id="bg-color" value="#0f0f0f">
-          </div>
-          <button class="invert-btn" id="invert-btn">⇄ Invert</button>
-        </div>
-      </div>
-
-      <!-- Decorations -->
-      <div class="section">
-        <div class="sec-label">Decorations</div>
-        <div class="deco-grid">
-          <button class="deco-btn" data-deco="underline"><span class="deco-icon">_</span>Underline</button>
-          <button class="deco-btn" data-deco="overline"><span class="deco-icon">‾</span>Overline</button>
-          <button class="deco-btn" data-deco="strike"><span class="deco-icon">—</span>Strikethrough</button>
-          <button class="deco-btn" data-deco="shadow"><span class="deco-icon">◼</span>Drop Shadow</button>
-          <button class="deco-btn" data-deco="long-shadow"><span class="deco-icon">▦</span>Long Shadow</button>
-          <button class="deco-btn" data-deco="outline"><span class="deco-icon">□</span>Outline Only</button>
-          <button class="deco-btn" data-deco="neon"><span class="deco-icon">◉</span>Neon Glow</button>
-          <button class="deco-btn" data-deco="stamp"><span class="deco-icon">▣</span>Stamp Effect</button>
-        </div>
-
-        <div class="shadow-controls" id="shadow-controls">
-          <div class="slider-row" style="margin-top:10px">
-            <span class="slider-label">Shadow Offset</span>
-            <div class="slider-wrap"><input type="range" id="shadow-offset" min="1" max="24" step="1" value="4"></div>
-            <span class="slider-val" id="shadow-offset-val">4px</span>
-          </div>
-          <div class="slider-row">
-            <span class="slider-label">Shadow Blur</span>
-            <div class="slider-wrap"><input type="range" id="shadow-blur" min="0" max="40" step="1" value="8"></div>
-            <span class="slider-val" id="shadow-blur-val">8px</span>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /panel-body -->
-  </div><!-- /panel -->
-
-  <!-- ══ RIGHT PANEL ════════════════════════════════════════════════════ -->
-  <div class="preview-panel">
-
-    <div class="preview-bar">
-      <div class="preview-meta">
-        <div class="preview-font" id="preview-font">Inter</div>
-        <div class="preview-tag" id="preview-tag">Minimal / Clean</div>
-      </div>
-
-      <div class="size-btns">
-        <button class="size-btn" data-sz="S">S</button>
-        <button class="size-btn active" data-sz="M">M</button>
-        <button class="size-btn" data-sz="L">L</button>
-        <button class="size-btn" data-sz="Full">Full</button>
-      </div>
-
-      <div class="bar-actions">
-        <button class="action-btn" id="btn-css">Copy CSS</button>
-        <button class="action-btn" id="btn-svg">SVG</button>
-        <button class="action-btn primary" id="btn-png">PNG</button>
+      <div class="toggle-row">
+        <button class="toggle-btn" id="italic-btn">Italic</button>
+        <button class="toggle-btn active" data-align="left">Left</button>
+        <button class="toggle-btn" data-align="center">Center</button>
+        <button class="toggle-btn" data-align="right">Right</button>
       </div>
     </div>
 
-    <div class="preview-canvas" id="preview-canvas">
-      <div class="preview-canvas-inner" id="preview-inner">
-        <div id="preview-text">Hello World</div>
+    <!-- Color -->
+    <div class="section">
+      <div class="sec-label">Color</div>
+      <div class="swatches" id="swatches"></div>
+      <div class="color-row">
+        <div class="color-pick"><label>Text</label><input type="color" id="text-color" value="#ffffff"></div>
+        <div class="color-pick"><label>BG</label><input type="color" id="bg-color" value="#0a0a0c"></div>
+        <button class="invert-btn" id="invert-btn">⇄ Invert</button>
+      </div>
+      <div class="sec-label" style="margin-top:11px">Text Gradient</div>
+      <div class="grad-row" id="grad-row"></div>
+    </div>
+
+    <!-- Background -->
+    <div class="section">
+      <div class="sec-label">Background Preset</div>
+      <div class="bg-presets" id="bg-presets"></div>
+    </div>
+
+    <!-- Decorations -->
+    <div class="section">
+      <div class="sec-label">Effects</div>
+      <div class="deco-grid" id="deco-grid"></div>
+      <div class="shadow-controls" id="shadow-controls">
+        <div class="slider-row" style="margin-top:10px">
+          <span class="slider-label">Shadow Off.</span>
+          <div class="slider-wrap"><input type="range" id="shadow-offset" min="1" max="28" step="1" value="4"></div>
+          <span class="slider-val" id="shadow-offset-val">4px</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Shadow Blur</span>
+          <div class="slider-wrap"><input type="range" id="shadow-blur" min="0" max="50" step="1" value="8"></div>
+          <span class="slider-val" id="shadow-blur-val">8px</span>
+        </div>
       </div>
     </div>
 
   </div>
+</div><!-- /left-panel -->
+
+<!-- ══ PREVIEW PANEL ════════════════════════════════════════════════════ -->
+<div class="preview-panel">
+  <div class="preview-bar">
+    <div class="preview-meta">
+      <div class="preview-font" id="preview-font">Inter</div>
+      <div class="preview-tag" id="preview-tag">Swiss / Clean</div>
+    </div>
+    <div class="size-btns">
+      <button class="size-btn" data-sz="S">S</button>
+      <button class="size-btn active" data-sz="M">M</button>
+      <button class="size-btn" data-sz="L">L</button>
+      <button class="size-btn" data-sz="Full">Full</button>
+    </div>
+    <div class="bar-actions">
+      <button class="action-btn" id="btn-css">Copy CSS</button>
+      <button class="action-btn" id="btn-svg">SVG</button>
+      <button class="action-btn primary" id="btn-png">PNG</button>
+    </div>
+  </div>
+  <div class="preview-canvas" id="preview-canvas">
+    <div class="preview-canvas-inner" id="preview-inner">
+      <div id="preview-text">Hello World</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RIGHT PANEL — DISCOVERY ═════════════════════════════════════════ -->
+<div class="panel right-panel">
+  <div class="panel-header">
+    <div class="right-header-title">Font Discovery</div>
+  </div>
+  <div class="discover-search">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="font-search" placeholder="Search fonts by name or style…" autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+  <div class="discover-body" id="discover-body"></div>
+</div>
 
 </div><!-- /app -->
-
 <div id="toast"></div>
 
 <script>
@@ -805,54 +456,225 @@ input[type="color"]:hover { border-color: var(--accent); }
 ════════════════════════════════════════════════════════════════════════ */
 
 const STYLES = {
-  'Cute / Playful':      ['Pacifico','Baloo 2','Fredoka','Boogaloo','Chewy','Bubblegum Sans','Lilita One','Titan One'],
-  'Minimal / Clean':     ['Inter','DM Sans','Figtree','Epilogue','Onest','Geist','Plus Jakarta Sans','Cabinet Grotesk'],
-  'Graphic / Display':   ['Bebas Neue','Anton','Black Han Sans','Teko','Barlow Condensed','Big Shoulders Display','Oswald','Squada One'],
-  'Avant-garde':         ['Syne','Space Grotesk','Outfit','Lexend','Plus Jakarta Sans','Oxanium','Exo 2','Chakra Petch'],
-  'Retro / Vintage':     ['Playfair Display','Abril Fatface','Josefin Sans','Righteous','Alfa Slab One','Yeseva One','Arvo','Zilla Slab'],
-  'Elegant / Serif':     ['Cormorant Garamond','EB Garamond','Libre Baskerville','Lora','Fraunces','Instrument Serif','Young Serif','Spectral'],
-  'Brutal / Expressive': ['Permanent Marker','Rubik Mono One','Russo One','Secular One','Archivo Black','Unbounded','Boogaloo','Big Shoulders Display'],
-  'Psychedelic / Art':   ['Bungee','Bungee Shade','Bungee Inline','Monoton','Faster One','Stalinist One','ZCOOL KuaiLe','Nabla'],
+  'Swiss / Clean':        ['Inter','DM Sans','Figtree','Epilogue','Onest','Plus Jakarta Sans','Outfit','Albert Sans'],
+  'High Fashion':         ['Cormorant Garamond','Bodoni Moda','Playfair Display','Fraunces','EB Garamond','Libre Bodoni','GFS Didot','Instrument Serif'],
+  'Graphic / Impact':     ['Bebas Neue','Anton','Black Han Sans','Teko','Barlow Condensed','Big Shoulders Display','Oswald','Squada One'],
+  'Avant-garde':          ['Syne','Unbounded','Space Grotesk','Oxanium','Exo 2','Chakra Petch','Kanit','Lexend'],
+  'Retro / Vintage':      ['Righteous','Alfa Slab One','Abril Fatface','Josefin Sans','Yeseva One','Arvo','Zilla Slab','Lilita One'],
+  'Elegant / Serif':      ['Lora','Libre Baskerville','Young Serif','Spectral','Merriweather','Crimson Pro','Vollkorn','PT Serif'],
+  'Expressive / Brutal':  ['Permanent Marker','Rubik Mono One','Russo One','Secular One','Archivo Black','Titan One','Boogaloo','Paytone One'],
+  'Techno / Sci-fi':      ['Orbitron','Rajdhani','Electrolize','Share Tech Mono','Audiowide','Nova Square','Quantico','Exo'],
+  'Handcrafted':          ['Caveat','Kalam','Dancing Script','Satisfy','Yellowtail','Pacifico','Allura','Sacramento'],
+  'Psychedelic / Ornate': ['Bungee Shade','Monoton','Nabla','Bungee Inline','Faster One','Stalinist One','Press Start 2P','VT323'],
 };
 
 const SWATCHES = [
-  '#000000','#ffffff','#c0392b','#e5534b','#e67e22',
-  '#27ae60','#16a085','#2471a3','#8e44ad','#e91e8c',
-  '#b5cc18','#f2ede1'
+  '#f0f0f2','#0a0a0c','#ff006e','#e5534b','#ff7c00',
+  '#ffd700','#00f090','#00b4d8','#7c3aed','#d946ef',
+  '#f8e8d0','#1a1a2e',
 ];
+
+const TEXT_GRADIENTS = [
+  { id:'none',  label:'None',    css:null },
+  { id:'flame', label:'Flame',   css:'linear-gradient(135deg,#ff6b35,#ffd700)' },
+  { id:'neonpk',label:'Neon',    css:'linear-gradient(135deg,#f72585,#7209b7)' },
+  { id:'ocean', label:'Ocean',   css:'linear-gradient(135deg,#48cae4,#0096c7,#0077b6)' },
+  { id:'aurora',label:'Aurora',  css:'linear-gradient(135deg,#a8edea,#fed6e3)' },
+  { id:'sunset',label:'Sunset',  css:'linear-gradient(135deg,#f093fb,#f5576c,#fda085)' },
+  { id:'gold',  label:'Gold',    css:'linear-gradient(135deg,#f6d365,#fda085)' },
+  { id:'ice',   label:'Ice',     css:'linear-gradient(135deg,#e0c3fc,#8ec5fc)' },
+  { id:'forest',label:'Forest',  css:'linear-gradient(135deg,#11998e,#38ef7d)' },
+  { id:'chrome',label:'Chrome',  css:'linear-gradient(135deg,#c0c0c0,#ffffff,#a8a8a8,#e8e8e8)' },
+];
+
+const BG_PRESETS = [
+  { id:'solid',   label:'Solid',     css:null },
+  { id:'night',   label:'Night',     css:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)' },
+  { id:'raisin',  label:'Dark',      css:'linear-gradient(135deg,#200122,#6f0000)' },
+  { id:'space',   label:'Space',     css:'linear-gradient(135deg,#000428,#004e92)' },
+  { id:'forest',  label:'Forest',    css:'linear-gradient(135deg,#0f2027,#203a43,#2c5364)' },
+  { id:'ink',     label:'Ink',       css:'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)' },
+  { id:'paper',   label:'Paper',     css:'linear-gradient(135deg,#f5f0e8,#e8dcc8)' },
+  { id:'cream',   label:'Cream',     css:'#f8f4ec' },
+  { id:'chalk',   label:'Chalk',     css:'linear-gradient(135deg,#f5f7fa,#c3cfe2)' },
+  { id:'blush',   label:'Blush',     css:'linear-gradient(135deg,#ffecd2,#fcb69f)' },
+  { id:'dusk',    label:'Dusk',      css:'linear-gradient(160deg,#a18cd1,#fbc2eb)' },
+  { id:'carbon',  label:'Carbon',    css:'#141414' },
+];
+
+const DECOS = [
+  { id:'underline',   icon:'_',  label:'Underline' },
+  { id:'overline',    icon:'‾',  label:'Overline' },
+  { id:'strike',      icon:'—',  label:'Strikethrough' },
+  { id:'shadow',      icon:'◼',  label:'Drop Shadow' },
+  { id:'long-shadow', icon:'▦',  label:'Long Shadow' },
+  { id:'outline',     icon:'□',  label:'Outline' },
+  { id:'neon',        icon:'◉',  label:'Neon Glow' },
+  { id:'glitch',      icon:'⚡', label:'Glitch' },
+  { id:'3d-extrude',  icon:'▲',  label:'3D Extrude' },
+  { id:'letterpress', icon:'▣',  label:'Letterpress' },
+  { id:'stamp',       icon:'◈',  label:'Stamp' },
+  { id:'blur-bg',     icon:'◌',  label:'Blur BG' },
+];
+
+/* Full font database for discovery panel */
+const FONT_DB = [
+  // Grotesque
+  { name:'Inter',              cat:'Grotesque',   tags:['swiss','clean','ui','minimal'],              vibe:'The standard modern UI typeface' },
+  { name:'DM Sans',            cat:'Grotesque',   tags:['clean','minimal','friendly','swiss'],         vibe:'Approachable and precise' },
+  { name:'Space Grotesk',      cat:'Grotesque',   tags:['tech','modern','editorial','display'],        vibe:'Tech-forward editorial grotesque' },
+  { name:'Syne',               cat:'Grotesque',   tags:['avantgarde','editorial','display','wide'],    vibe:'High-contrast avant-garde grotesque' },
+  { name:'Outfit',             cat:'Geometric',   tags:['geometric','clean','friendly'],               vibe:'Friendly geometric for modern brands' },
+  { name:'Plus Jakarta Sans',  cat:'Grotesque',   tags:['ui','versatile','modern','clean'],            vibe:'Premium versatile grotesque' },
+  { name:'Figtree',            cat:'Geometric',   tags:['geometric','ui','clean','rounded'],           vibe:'Slightly rounded geometric UI' },
+  { name:'Epilogue',           cat:'Grotesque',   tags:['editorial','variable','display'],             vibe:'Variable editorial grotesque' },
+  { name:'Albert Sans',        cat:'Grotesque',   tags:['swiss','narrow','clean','precise'],           vibe:'Precise Swiss narrow grotesque' },
+  { name:'Unbounded',          cat:'Display',     tags:['wide','tech','bold','avantgarde'],            vibe:'Expanded bold for impact' },
+  { name:'Archivo',            cat:'Grotesque',   tags:['swiss','display','bold','versatile'],         vibe:'Versatile workhorse grotesque' },
+  { name:'Be Vietnam Pro',     cat:'Grotesque',   tags:['humanist','versatile'],                       vibe:'Humanist grotesque, wide language support' },
+  // Geometric
+  { name:'Poppins',            cat:'Geometric',   tags:['geometric','versatile','modern'],             vibe:'Widely-used geometric workhorse' },
+  { name:'Nunito',             cat:'Geometric',   tags:['rounded','playful','friendly'],               vibe:'Rounded friendly geometric' },
+  { name:'Jost',               cat:'Geometric',   tags:['futura-like','minimal','geometric'],          vibe:'Modern Futura revival' },
+  { name:'Lexend',             cat:'Geometric',   tags:['readable','accessible','clean'],              vibe:'Designed for readability' },
+  // Serif — Didone / High Fashion
+  { name:'Cormorant Garamond', cat:'Serif',       tags:['elegant','luxury','editorial','thin','fashion'], vibe:'Ultra-thin luxury editorial' },
+  { name:'Bodoni Moda',        cat:'Serif',       tags:['bodoni','fashion','luxury','didone','bold'],  vibe:'Fashion Bodoni, Vogue-style' },
+  { name:'Playfair Display',   cat:'Serif',       tags:['editorial','display','didone','elegant'],     vibe:'High-contrast editorial display' },
+  { name:'Fraunces',           cat:'Serif',       tags:['variable','optical','expressive','display'],  vibe:'Optical size variable magic' },
+  { name:'EB Garamond',        cat:'Serif',       tags:['classic','book','humanist','oldstyle'],       vibe:'Classic Renaissance humanist' },
+  { name:'Libre Bodoni',       cat:'Serif',       tags:['didone','elegant','fashion'],                 vibe:'Elegant Bodoni for screen' },
+  { name:'GFS Didot',          cat:'Serif',       tags:['didone','greek','classical','fashion'],       vibe:'Classical Greek Didot revival' },
+  { name:'Instrument Serif',   cat:'Serif',       tags:['modern','editorial','elegant'],               vibe:'Contemporary editorial serif' },
+  { name:'Young Serif',        cat:'Serif',       tags:['oldstyle','warm','book'],                     vibe:'Warm oldstyle book face' },
+  { name:'Spectral',           cat:'Serif',       tags:['screen','readable','editorial'],              vibe:'Screen-optimized editorial' },
+  { name:'Merriweather',       cat:'Serif',       tags:['screen','readable','slab'],                   vibe:'Hinted for small screen use' },
+  { name:'Crimson Pro',        cat:'Serif',       tags:['book','humanist','elegant','readable'],       vibe:'Beautiful book serif' },
+  { name:'Lora',               cat:'Serif',       tags:['calligraphic','brush','modern'],              vibe:'Calligraphic brush-feel' },
+  { name:'Arvo',               cat:'Slab Serif',  tags:['slab','screen','retro','strong'],             vibe:'Strong screen slab' },
+  { name:'Zilla Slab',         cat:'Slab Serif',  tags:['slab','versatile','modern'],                  vibe:'Modern versatile slab' },
+  { name:'Alfa Slab One',      cat:'Slab Serif',  tags:['slab','bold','victorian','display'],          vibe:'Victorian fat-face slab' },
+  // Display / Impact
+  { name:'Bebas Neue',         cat:'Display',     tags:['condensed','bold','impact','poster','graphic'], vibe:'Dominant condensed display' },
+  { name:'Anton',              cat:'Display',     tags:['condensed','impact','bold','headline'],       vibe:'High-impact headline font' },
+  { name:'Black Han Sans',     cat:'Display',     tags:['ultra-bold','condensed'],                     vibe:'Ultra-bold condensed block' },
+  { name:'Teko',               cat:'Display',     tags:['condensed','sporty','athletic'],              vibe:'Athletic condensed' },
+  { name:'Barlow Condensed',   cat:'Display',     tags:['condensed','versatile','sports'],             vibe:'Versatile condensed family' },
+  { name:'Big Shoulders Display',cat:'Display',   tags:['condensed','industrial','chicago','bold'],    vibe:'Industrial Chicago-style' },
+  { name:'Oswald',             cat:'Display',     tags:['condensed','grotesque','bold'],               vibe:'Classic condensed grotesque' },
+  { name:'Squada One',         cat:'Display',     tags:['condensed','square','tech'],                  vibe:'Square-edged tech display' },
+  { name:'Rubik Mono One',     cat:'Display',     tags:['monospace','bold','brutal'],                  vibe:'Brutal mono bold display' },
+  { name:'Russo One',          cat:'Display',     tags:['bold','strong','display'],                    vibe:'Strong bold display' },
+  // Retro
+  { name:'Righteous',          cat:'Retro',       tags:['retro','70s','groovy','rounded'],             vibe:'70s groovy rounded' },
+  { name:'Abril Fatface',      cat:'Retro',       tags:['didone','poster','bold','victorian'],         vibe:'Vintage poster Didone' },
+  { name:'Josefin Sans',       cat:'Retro',       tags:['geometric','1920s','art-deco','elegant'],     vibe:'1920s Art Deco geometric' },
+  { name:'Yeseva One',         cat:'Retro',       tags:['display','retro','fancy'],                    vibe:'Ornate retro display' },
+  // Script / Handwriting
+  { name:'Caveat',             cat:'Handwriting', tags:['handwritten','casual','sketch','informal'],   vibe:'Casual sketch handwriting' },
+  { name:'Kalam',              cat:'Handwriting', tags:['handwritten','ink','personal'],               vibe:'Warm ink handwriting' },
+  { name:'Dancing Script',     cat:'Script',      tags:['script','lively','casual','friendly'],        vibe:'Lively casual script' },
+  { name:'Satisfy',            cat:'Script',      tags:['script','elegant','brush'],                   vibe:'Elegant brush script' },
+  { name:'Pacifico',           cat:'Script',      tags:['retro','brush','friendly','60s'],             vibe:'1960s brush script' },
+  { name:'Yellowtail',         cat:'Script',      tags:['script','brush','expressive'],                vibe:'Expressive brush script' },
+  { name:'Allura',             cat:'Script',      tags:['calligraphy','formal','elegant'],             vibe:'Formal calligraphic script' },
+  { name:'Sacramento',         cat:'Script',      tags:['thin','elegant','formal'],                    vibe:'Thin elegant formal script' },
+  // Mono / Tech
+  { name:'Space Mono',         cat:'Monospace',   tags:['code','retro','typewriter'],                  vibe:'Retro typewriter aesthetic' },
+  { name:'Share Tech Mono',    cat:'Monospace',   tags:['code','tech','clean'],                        vibe:'Clean tech monospace' },
+  { name:'Roboto Mono',        cat:'Monospace',   tags:['code','mechanical','clean'],                  vibe:'Mechanical code font' },
+  { name:'IBM Plex Mono',      cat:'Monospace',   tags:['code','editorial','corporate'],               vibe:'Corporate editorial mono' },
+  { name:'Fira Code',          cat:'Monospace',   tags:['code','ligatures','developer'],               vibe:'Code with ligatures' },
+  // Techno
+  { name:'Orbitron',           cat:'Techno',      tags:['scifi','futuristic','geometric','space'],     vibe:'Geometric sci-fi classic' },
+  { name:'Rajdhani',           cat:'Techno',      tags:['angular','tech'],                             vibe:'Angular tech display' },
+  { name:'Electrolize',        cat:'Techno',      tags:['futuristic','angular','tech'],                vibe:'Angular futuristic' },
+  { name:'Exo 2',              cat:'Techno',      tags:['geometric','scifi','versatile'],              vibe:'Versatile sci-fi geometric' },
+  { name:'Chakra Petch',       cat:'Techno',      tags:['angular','tech','display'],                   vibe:'Angular tech display' },
+  { name:'Oxanium',            cat:'Techno',      tags:['geometric','tech','future'],                  vibe:'Future geometric wide' },
+  { name:'Audiowide',          cat:'Techno',      tags:['wide','tech','futuristic'],                   vibe:'Wide futuristic tech' },
+  { name:'Kanit',              cat:'Techno',      tags:['geometric','condensed','thai'],               vibe:'Thai-inflected geometric' },
+  // Art / Psychedelic
+  { name:'Bungee',             cat:'Display',     tags:['street','signage','urban','bold'],            vibe:'Urban street signage' },
+  { name:'Bungee Shade',       cat:'Display',     tags:['3d','street','retro','shade'],                vibe:'Retro 3D street signage' },
+  { name:'Bungee Inline',      cat:'Display',     tags:['inline','art','display'],                     vibe:'Inline retro art display' },
+  { name:'Monoton',            cat:'Display',     tags:['inline','art-deco','neon','retro'],           vibe:'Art Deco neon inline' },
+  { name:'Nabla',              cat:'Display',     tags:['color','variable','experimental','3d'],       vibe:'Color variable 3D font' },
+  { name:'Faster One',         cat:'Display',     tags:['speed','italic','racing','display'],          vibe:'Speed/racing condensed italic' },
+  { name:'Stalinist One',      cat:'Display',     tags:['soviet','constructivist','bold','retro'],     vibe:'Soviet constructivist bold' },
+  { name:'Press Start 2P',     cat:'Display',     tags:['pixel','game','8bit','retro'],                vibe:'8-bit pixel game classic' },
+  { name:'VT323',              cat:'Display',     tags:['pixel','terminal','retro','screen'],          vibe:'CRT terminal aesthetic' },
+  // Expressive
+  { name:'Permanent Marker',   cat:'Handwriting', tags:['marker','expressive','bold','casual'],       vibe:'Big marker expression' },
+  { name:'Paytone One',        cat:'Display',     tags:['bold','friendly','chunky'],                   vibe:'Chunky friendly bold' },
+  { name:'Titan One',          cat:'Display',     tags:['bold','condensed','display'],                 vibe:'Bold condensed display' },
+  { name:'Lilita One',         cat:'Display',     tags:['bold','playful','rounded'],                   vibe:'Rounded playful bold' },
+  { name:'Archivo Black',      cat:'Display',     tags:['grotesque','bold','strong'],                  vibe:'Heavy grotesque display' },
+];
+
+/* Famous non-GF references per style */
+const STYLE_FAMOUS = {
+  'Swiss / Clean':        'Helvetica Neue, Aktiv Grotesk, GT Walsheim, Founders Grotesk',
+  'High Fashion':         'Didot, Canela, Noe Display, Cardinal, Portrait',
+  'Graphic / Impact':     'Druk, Acumin Condensed, Trade Gothic Bold Condensed',
+  'Avant-garde':          'Suisse Int\'l, ABC Diatype, Graphik, Roobert',
+  'Retro / Vintage':      'P22 Johnston, Windsor, ITC Lubalin Graph, Clarendon',
+  'Elegant / Serif':      'Garamond Premier Pro, Freight Display, Miller Display',
+  'Expressive / Brutal':  'Akzidenz-Grotesk Super, Tungsten, Knockout',
+  'Techno / Sci-fi':      'Eurostile Extended, Bank Gothic, OCR-A',
+  'Handcrafted':          'Reklame Script, Thirsty Script, Lavanderia',
+  'Psychedelic / Ornate': 'Glaser Stencil, Sinaloa, House Industries fonts',
+};
+
+/* Tags to filter discovery suggestions per style */
+const STYLE_SUGGEST_TAGS = {
+  'Swiss / Clean':        ['swiss','clean','grotesque','ui','minimal'],
+  'High Fashion':         ['didone','elegant','fashion','luxury','editorial','thin'],
+  'Graphic / Impact':     ['condensed','bold','impact','poster','display','graphic'],
+  'Avant-garde':          ['avantgarde','editorial','display','tech','variable'],
+  'Retro / Vintage':      ['retro','vintage','70s','1920s','victorian','slab','groovy'],
+  'Elegant / Serif':      ['elegant','book','readable','humanist','oldstyle','serif'],
+  'Expressive / Brutal':  ['bold','marker','expressive','brutal','chunky','strong'],
+  'Techno / Sci-fi':      ['scifi','futuristic','angular','tech','space','geometric'],
+  'Handcrafted':          ['handwritten','script','brush','calligraphy','casual','ink'],
+  'Psychedelic / Ornate': ['inline','art-deco','neon','3d','pixel','ornate','shade'],
+};
 
 /* ════════════════════════════════════════════════════════════════════════
    STATE
 ════════════════════════════════════════════════════════════════════════ */
 
 const S = {
-  text:        'Hello World',
-  style:       'Minimal / Clean',
-  font:        'Inter',
-  weight:      400,
-  size:        72,
-  spacing:     0,
-  lineHeight:  1.2,
-  italic:      false,
-  align:       'left',
-  textColor:   '#ffffff',
-  bgColor:     '#0f0f0f',
-  decos:       new Set(),
-  shadowOff:   4,
-  shadowBlur:  8,
-  previewSz:   'M',
-  loaded:      new Set(),
+  text:       'Hello World',
+  style:      'Swiss / Clean',
+  font:       'Inter',
+  weight:     400,
+  size:       72,
+  spacing:    0,
+  lineHeight: 1.2,
+  italic:     false,
+  align:      'left',
+  textColor:  '#f0f0f2',
+  bgColor:    '#0a0a0c',
+  bgPreset:   'solid',
+  textGrad:   'none',
+  decos:      new Set(),
+  shadowOff:  4,
+  shadowBlur: 8,
+  previewSz:  'M',
+  loaded:     new Set(),
 };
 
 /* ════════════════════════════════════════════════════════════════════════
-   GOOGLE FONTS
+   FONT LOADING
 ════════════════════════════════════════════════════════════════════════ */
 
 function loadFonts(fonts) {
   const needed = fonts.filter(f => !S.loaded.has(f));
   if (!needed.length) return;
-  // Build URL — request all weights for each font
-  const families = needed.map(f => `family=${encodeURIComponent(f)}:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700`).join('&');
+  const families = needed.map(f =>
+    `family=${encodeURIComponent(f)}:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700`
+  ).join('&');
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.crossOrigin = 'anonymous';
@@ -884,7 +706,6 @@ function buildSwatches() {
     const sw = document.createElement('div');
     sw.className = 'swatch' + (c.toLowerCase() === S.textColor.toLowerCase() ? ' active' : '');
     sw.style.background = c;
-    if (c === '#ffffff' || c === '#f2ede1') sw.style.borderColor = 'rgba(255,255,255,0.12)';
     sw.addEventListener('click', () => {
       S.textColor = c;
       document.getElementById('text-color').value = c;
@@ -893,6 +714,65 @@ function buildSwatches() {
       render();
     });
     el.appendChild(sw);
+  });
+}
+
+function buildGradPills() {
+  const el = document.getElementById('grad-row');
+  el.innerHTML = '';
+  TEXT_GRADIENTS.forEach(g => {
+    const pill = document.createElement('div');
+    pill.className = 'grad-pill' + (g.id === 'none' ? ' grad-none' : '') + (g.id === S.textGrad ? ' active' : '');
+    if (g.css) pill.style.background = g.css;
+    if (g.id === 'none') pill.textContent = '✕';
+    pill.title = g.label;
+    pill.addEventListener('click', () => {
+      S.textGrad = g.id;
+      document.querySelectorAll('.grad-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      render();
+    });
+    el.appendChild(pill);
+  });
+}
+
+function buildBgPresets() {
+  const el = document.getElementById('bg-presets');
+  el.innerHTML = '';
+  BG_PRESETS.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'bg-preset' + (p.id === S.bgPreset ? ' active' : '');
+    div.style.background = p.css || S.bgColor;
+    div.title = p.label;
+    div.addEventListener('click', () => {
+      S.bgPreset = p.id;
+      if (!p.css) {
+        // solid — keep current bgColor
+      }
+      document.querySelectorAll('.bg-preset').forEach(b => b.classList.remove('active'));
+      div.classList.add('active');
+      render();
+    });
+    el.appendChild(div);
+  });
+}
+
+function buildDecoGrid() {
+  const el = document.getElementById('deco-grid');
+  el.innerHTML = '';
+  DECOS.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'deco-btn';
+    btn.dataset.deco = d.id;
+    btn.innerHTML = `<span class="deco-icon">${d.icon}</span>${d.label}`;
+    btn.addEventListener('click', () => {
+      S.decos.has(d.id) ? S.decos.delete(d.id) : S.decos.add(d.id);
+      btn.classList.toggle('active', S.decos.has(d.id));
+      const needsShadow = S.decos.has('shadow') || S.decos.has('long-shadow');
+      document.getElementById('shadow-controls').classList.toggle('visible', needsShadow);
+      render();
+    });
+    el.appendChild(btn);
   });
 }
 
@@ -922,18 +802,139 @@ function refreshFontCardText() {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
+   DISCOVERY PANEL
+════════════════════════════════════════════════════════════════════════ */
+
+function buildRefCard(f, previewText) {
+  const card = document.createElement('div');
+  card.className = 'ref-card';
+  const gfUrl = `https://fonts.google.com/specimen/${encodeURIComponent(f.name.replace(/ /g,'+'))}`;
+  card.innerHTML = `
+    <div class="ref-preview" style="font-family:'${f.name}',serif;">${previewText}</div>
+    <div class="ref-meta">
+      <span class="ref-name">${f.name}</span>
+      <span class="ref-tag">${f.cat}</span>
+    </div>
+    <div class="ref-vibe">${f.vibe}</div>
+    <div class="ref-actions">
+      <button class="ref-btn try-btn">↳ Try It</button>
+      <a class="ref-btn view-btn" href="${gfUrl}" target="_blank" rel="noopener">Google Fonts ↗</a>
+    </div>`;
+  card.querySelector('.try-btn').addEventListener('click', () => {
+    S.font = f.name;
+    loadFonts([f.name]);
+    // update grid selection if visible
+    document.querySelectorAll('.font-card').forEach(c => {
+      c.classList.toggle('active', c.querySelector('.card-name')?.textContent === f.name);
+    });
+    render();
+    toast(`Applied ${f.name}`);
+  });
+  // load font for preview
+  loadFonts([f.name]);
+  return card;
+}
+
+function updateDiscovery(style) {
+  const query = document.getElementById('font-search').value.trim().toLowerCase();
+  if (query) { handleSearch(query); return; }
+
+  const body = document.getElementById('discover-body');
+  body.innerHTML = '';
+
+  // Auto-suggestions section
+  const suggestSec = document.createElement('div');
+  suggestSec.className = 'discover-section';
+  const sugLabel = document.createElement('div');
+  sugLabel.className = 'discover-label';
+  sugLabel.textContent = 'Suggested for this style';
+  suggestSec.appendChild(sugLabel);
+
+  const tags = STYLE_SUGGEST_TAGS[style] || [];
+  const suggestions = FONT_DB
+    .filter(f => f.tags.some(t => tags.includes(t)))
+    .filter(f => !STYLES[style]?.includes(f.name))
+    .slice(0, 5);
+
+  const previewText = S.text || 'Typeface';
+  suggestions.forEach(f => suggestSec.appendChild(buildRefCard(f, previewText)));
+
+  // Famous references note
+  if (STYLE_FAMOUS[style]) {
+    const note = document.createElement('div');
+    note.className = 'famous-note';
+    note.innerHTML = `<p><strong>Industry references:</strong> ${STYLE_FAMOUS[style]} — well-known typefaces in this genre (many are commercial/premium).</p>`;
+    suggestSec.appendChild(note);
+  }
+
+  body.appendChild(suggestSec);
+
+  // Style explorer
+  const exploreSec = document.createElement('div');
+  exploreSec.className = 'discover-section';
+  const expLabel = document.createElement('div');
+  expLabel.className = 'discover-label';
+  expLabel.textContent = 'Explore adjacent styles';
+  exploreSec.appendChild(expLabel);
+
+  const adjacent = Object.keys(STYLES).filter(s => s !== style);
+  adjacent.slice(0, 4).forEach(s => {
+    const chip = document.createElement('button');
+    chip.style.cssText = 'margin:3px 3px 0 0;padding:4px 10px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer;transition:all .11s ease;font-family:inherit;';
+    chip.textContent = s;
+    chip.addEventListener('mouseenter', () => { chip.style.borderColor='var(--border-hover)';chip.style.color='var(--text)'; });
+    chip.addEventListener('mouseleave', () => { chip.style.borderColor='var(--border)';chip.style.color='var(--text-dim)'; });
+    chip.addEventListener('click', () => pickStyle(s));
+    exploreSec.appendChild(chip);
+  });
+  body.appendChild(exploreSec);
+}
+
+function handleSearch(query) {
+  const body = document.getElementById('discover-body');
+  body.innerHTML = '';
+
+  if (!query) { updateDiscovery(S.style); return; }
+
+  const results = FONT_DB.filter(f =>
+    f.name.toLowerCase().includes(query) ||
+    f.tags.some(t => t.includes(query)) ||
+    f.cat.toLowerCase().includes(query) ||
+    f.vibe.toLowerCase().includes(query)
+  ).slice(0, 12);
+
+  const sec = document.createElement('div');
+  sec.className = 'discover-section';
+  const label = document.createElement('div');
+  label.className = 'discover-label';
+  label.textContent = results.length ? `${results.length} font${results.length > 1 ? 's' : ''} found` : 'No results';
+  sec.appendChild(label);
+
+  if (!results.length) {
+    const empty = document.createElement('div');
+    empty.className = 'search-empty';
+    empty.innerHTML = `No fonts matched "<strong>${query}</strong>"<br>Try: serif, condensed, retro, brush…`;
+    sec.appendChild(empty);
+  } else {
+    const previewText = S.text || 'Typeface';
+    results.forEach(f => sec.appendChild(buildRefCard(f, previewText)));
+  }
+
+  body.appendChild(sec);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
    PICK STYLE
 ════════════════════════════════════════════════════════════════════════ */
 
 function pickStyle(name) {
   S.style = name;
-  document.querySelectorAll('.style-tag').forEach(b => {
-    b.classList.toggle('active', b.textContent === name);
-  });
+  document.querySelectorAll('.style-tag').forEach(b => b.classList.toggle('active', b.textContent === name));
   const fonts = STYLES[name];
   loadFonts(fonts);
   S.font = fonts[0];
   buildFontGrid(fonts);
+  updateDiscovery(name);
   render();
 }
 
@@ -952,7 +953,6 @@ function bindSlider(id, key, fmt) {
 }
 
 function bindControls() {
-  // Text input
   let t;
   document.getElementById('word-input').addEventListener('input', e => {
     clearTimeout(t);
@@ -963,22 +963,19 @@ function bindControls() {
     }, 16);
   });
 
-  // Sliders
-  bindSlider('weight',       'weight',     v => v);
-  bindSlider('size',         'size',       v => v + 'px');
-  bindSlider('spacing',      'spacing',    v => parseFloat(v).toFixed(1) + 'px');
-  bindSlider('lineheight',   'lineHeight', v => parseFloat(v).toFixed(2));
-  bindSlider('shadow-offset','shadowOff',  v => v + 'px');
-  bindSlider('shadow-blur',  'shadowBlur', v => v + 'px');
+  bindSlider('weight',        'weight',     v => v);
+  bindSlider('size',          'size',       v => v + 'px');
+  bindSlider('spacing',       'spacing',    v => parseFloat(v).toFixed(1) + 'px');
+  bindSlider('lineheight',    'lineHeight', v => parseFloat(v).toFixed(2));
+  bindSlider('shadow-offset', 'shadowOff',  v => v + 'px');
+  bindSlider('shadow-blur',   'shadowBlur', v => v + 'px');
 
-  // Italic
   document.getElementById('italic-btn').addEventListener('click', () => {
     S.italic = !S.italic;
     document.getElementById('italic-btn').classList.toggle('active', S.italic);
     render();
   });
 
-  // Align
   document.querySelectorAll('[data-align]').forEach(btn => {
     btn.addEventListener('click', () => {
       S.align = btn.dataset.align;
@@ -988,7 +985,6 @@ function bindControls() {
     });
   });
 
-  // Color pickers
   document.getElementById('text-color').addEventListener('input', e => {
     S.textColor = e.target.value;
     document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
@@ -997,6 +993,9 @@ function bindControls() {
 
   document.getElementById('bg-color').addEventListener('input', e => {
     S.bgColor = e.target.value;
+    S.bgPreset = 'solid';
+    document.querySelectorAll('.bg-preset').forEach(b => b.classList.remove('active'));
+    document.querySelector('.bg-preset')?.classList.add('active');
     render();
   });
 
@@ -1004,22 +1003,12 @@ function bindControls() {
     [S.textColor, S.bgColor] = [S.bgColor, S.textColor];
     document.getElementById('text-color').value = S.textColor;
     document.getElementById('bg-color').value = S.bgColor;
+    S.bgPreset = 'solid';
+    document.querySelectorAll('.bg-preset').forEach(b => b.classList.remove('active'));
+    document.querySelector('.bg-preset')?.classList.add('active');
     render();
   });
 
-  // Decorations
-  document.querySelectorAll('.deco-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const d = btn.dataset.deco;
-      S.decos.has(d) ? S.decos.delete(d) : S.decos.add(d);
-      btn.classList.toggle('active', S.decos.has(d));
-      const needsShadow = S.decos.has('shadow') || S.decos.has('long-shadow');
-      document.getElementById('shadow-controls').classList.toggle('visible', needsShadow);
-      render();
-    });
-  });
-
-  // Preview size
   document.querySelectorAll('.size-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       S.previewSz = btn.dataset.sz;
@@ -1029,10 +1018,16 @@ function bindControls() {
     });
   });
 
-  // Actions
   document.getElementById('btn-css').addEventListener('click', copyCss);
   document.getElementById('btn-png').addEventListener('click', exportPng);
   document.getElementById('btn-svg').addEventListener('click', exportSvg);
+
+  // Discovery search
+  let st;
+  document.getElementById('font-search').addEventListener('input', e => {
+    clearTimeout(st);
+    st = setTimeout(() => handleSearch(e.target.value.trim().toLowerCase()), 120);
+  });
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1041,103 +1036,163 @@ function bindControls() {
 
 function applyPreviewSize() {
   const inner = document.getElementById('preview-inner');
-  const map = { S: '360px', M: '600px', L: '860px', Full: '100%' };
-  const val = map[S.previewSz] || '600px';
-  inner.style.maxWidth = val;
+  const map = { S: '360px', M: '600px', L: '880px', Full: '100%' };
+  inner.style.maxWidth = map[S.previewSz] || '600px';
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SHADOW / EFFECT BUILDERS
+════════════════════════════════════════════════════════════════════════ */
+
+function build3DExtrude(color) {
+  const r = parseInt(color.slice(1,3)||'00',16);
+  const g = parseInt(color.slice(3,5)||'00',16);
+  const b = parseInt(color.slice(5,7)||'00',16);
+  const parts = [];
+  for (let i = 1; i <= 10; i++) {
+    const f = Math.max(0, 1 - i * 0.08);
+    parts.push(`${i}px ${i}px 0 rgb(${Math.floor(r*f)},${Math.floor(g*f)},${Math.floor(b*f)})`);
+  }
+  return parts.join(', ');
+}
+
+function buildTextShadow() {
+  const parts = [];
+  const c = S.textColor;
+
+  if (S.decos.has('shadow')) {
+    parts.push(`${S.shadowOff}px ${S.shadowOff}px ${S.shadowBlur}px rgba(0,0,0,0.6)`);
+  }
+  if (S.decos.has('long-shadow')) {
+    for (let i = 1; i <= 22; i++) {
+      const alpha = Math.max(0, 0.048 - i * 0.0022).toFixed(3);
+      parts.push(`${i*2}px ${i*2}px 0 rgba(0,0,0,${alpha})`);
+    }
+  }
+  if (S.decos.has('neon')) {
+    parts.push(`0 0 5px ${c}, 0 0 15px ${c}, 0 0 35px ${c}, 0 0 70px ${c}`);
+  }
+  if (S.decos.has('3d-extrude')) {
+    parts.push(build3DExtrude(c));
+  }
+  if (S.decos.has('letterpress')) {
+    parts.push(`0 1px 0 rgba(255,255,255,0.12), 0 -1px 0 rgba(0,0,0,0.6), 1px 0 1px rgba(0,0,0,0.3)`);
+  }
+  return parts.length ? parts.join(', ') : 'none';
 }
 
 /* ════════════════════════════════════════════════════════════════════════
    RENDER
 ════════════════════════════════════════════════════════════════════════ */
 
-function buildShadow() {
-  const parts = [];
-  const c = S.textColor;
-
-  if (S.decos.has('shadow')) {
-    parts.push(`${S.shadowOff}px ${S.shadowOff}px ${S.shadowBlur}px rgba(0,0,0,0.55)`);
-  }
-
-  if (S.decos.has('long-shadow')) {
-    // 20-layer stacked shadow
-    for (let i = 1; i <= 20; i++) {
-      // color fades from semi-opaque to transparent
-      const alpha = (0.045 - i * 0.002).toFixed(3);
-      parts.push(`${i * 2}px ${i * 2}px 0 rgba(0,0,0,${alpha})`);
-    }
-  }
-
-  if (S.decos.has('neon')) {
-    parts.push(`0 0 6px ${c}, 0 0 16px ${c}, 0 0 35px ${c}, 0 0 60px ${c}`);
-  }
-
-  return parts.length ? parts.join(', ') : 'none';
-}
-
 function render() {
   const el = document.getElementById('preview-text');
   const canvas = document.getElementById('preview-canvas');
+  const inner = document.getElementById('preview-inner');
 
-  el.style.fontFamily    = `'${S.font}', sans-serif`;
-  el.style.fontWeight    = S.weight;
-  el.style.fontSize      = S.size + 'px';
-  el.style.letterSpacing = S.spacing + 'px';
-  el.style.lineHeight    = S.lineHeight;
-  el.style.fontStyle     = S.italic ? 'italic' : 'normal';
-  el.style.textAlign     = S.align;
-  el.textContent         = S.text || 'Type something…';
+  const displayText = S.text || 'Type something…';
 
-  // Text color — transparent when outline-only
-  el.style.color = S.decos.has('outline') ? 'transparent' : S.textColor;
+  /* ── Glitch effect uses a wrapper ── */
+  if (S.decos.has('glitch')) {
+    inner.innerHTML = `<div id="preview-text" class="glitch-active" data-text="${escHtml(displayText)}">${escHtml(displayText)}</div>`;
+  } else {
+    if (inner.querySelector('.glitch-active')) {
+      inner.innerHTML = `<div id="preview-text">${escHtml(displayText)}</div>`;
+    } else {
+      document.getElementById('preview-text').textContent = displayText;
+    }
+  }
 
-  // Decoration
+  const pt = document.getElementById('preview-text');
+
+  pt.style.fontFamily    = `'${S.font}', sans-serif`;
+  pt.style.fontWeight    = S.weight;
+  pt.style.fontSize      = S.size + 'px';
+  pt.style.letterSpacing = S.spacing + 'px';
+  pt.style.lineHeight    = S.lineHeight;
+  pt.style.fontStyle     = S.italic ? 'italic' : 'normal';
+  pt.style.textAlign     = S.align;
+  pt.style.maxWidth      = '90%';
+  pt.style.wordBreak     = 'break-word';
+  pt.style.padding       = '40px';
+  pt.style.pointerEvents = 'none';
+  pt.style.userSelect    = 'none';
+
+  /* ── Text gradient or solid color ── */
+  const grad = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
+  if (grad && grad.css && !S.decos.has('outline')) {
+    pt.style.background              = grad.css;
+    pt.style.webkitBackgroundClip    = 'text';
+    pt.style.webkitTextFillColor     = 'transparent';
+    pt.style.backgroundClip          = 'text';
+    pt.style.color                   = 'transparent';
+    pt.style.webkitTextStroke        = '';
+  } else {
+    pt.style.background              = 'none';
+    pt.style.webkitBackgroundClip    = '';
+    pt.style.webkitTextFillColor     = '';
+    pt.style.backgroundClip          = '';
+    pt.style.color = S.decos.has('outline') ? 'transparent' : S.textColor;
+    pt.style.webkitTextStroke = S.decos.has('outline') ? `2px ${S.textColor}` : '';
+  }
+
+  /* ── Text decoration ── */
   const decList = [];
   if (S.decos.has('underline')) decList.push('underline');
   if (S.decos.has('overline'))  decList.push('overline');
   if (S.decos.has('strike'))    decList.push('line-through');
-  el.style.textDecoration = decList.length ? decList.join(' ') : 'none';
-  el.style.textDecorationColor = S.textColor;
+  pt.style.textDecoration      = decList.length ? decList.join(' ') : 'none';
+  pt.style.textDecorationColor = S.textColor;
 
-  // Text shadow
-  el.style.textShadow = buildShadow();
+  /* ── Text shadow ── */
+  pt.style.textShadow = buildTextShadow();
 
-  // Outline / stroke
-  el.style.webkitTextStroke = S.decos.has('outline') ? `2px ${S.textColor}` : '';
+  /* ── Blur BG ── */
+  inner.style.backdropFilter = S.decos.has('blur-bg') ? 'blur(14px)' : '';
+  inner.style.webkitBackdropFilter = inner.style.backdropFilter;
 
-  // Stamp
+  /* ── Stamp ── */
   if (S.decos.has('stamp')) {
-    el.style.transform     = 'rotate(-2.5deg)';
-    el.style.border        = `3px solid ${S.textColor}`;
-    el.style.padding       = '18px 28px';
-    el.style.borderRadius  = '3px';
-    el.style.opacity       = '0.88';
+    pt.style.transform    = 'rotate(-2.5deg)';
+    pt.style.border       = `3px solid ${S.textColor}`;
+    pt.style.padding      = '18px 28px';
+    pt.style.borderRadius = '3px';
+    pt.style.opacity      = '0.88';
   } else {
-    el.style.transform     = '';
-    el.style.border        = '';
-    el.style.padding       = '40px';
-    el.style.borderRadius  = '';
-    el.style.opacity       = '';
+    pt.style.transform    = '';
+    pt.style.border       = '';
+    pt.style.padding      = '40px';
+    pt.style.borderRadius = '';
+    pt.style.opacity      = '';
   }
 
-  // Background
-  canvas.style.background = S.bgColor;
+  /* ── Background ── */
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  if (bgPreset && bgPreset.css) {
+    canvas.style.background = bgPreset.css;
+  } else {
+    canvas.style.background = S.bgColor;
+  }
 
-  // Hide grid dots on light backgrounds
-  const brightness = getBrightness(S.bgColor);
-  canvas.classList.toggle('light-bg', brightness > 180);
+  /* ── Grid dot visibility ── */
+  const bgSample = bgPreset?.css || S.bgColor;
+  canvas.classList.toggle('light-bg', isBright(bgSample));
 
-  // Update meta labels
+  /* ── Meta ── */
   document.getElementById('preview-font').textContent = S.font;
   document.getElementById('preview-tag').textContent  = S.style;
 }
 
-function getBrightness(hex) {
-  const h = hex.replace('#','');
-  if (h.length < 6) return 0;
-  const r = parseInt(h.slice(0,2),16);
-  const g = parseInt(h.slice(2,4),16);
-  const b = parseInt(h.slice(4,6),16);
-  return 0.299*r + 0.587*g + 0.114*b;
+function isBright(bg) {
+  if (bg.startsWith('linear-gradient') || bg.startsWith('radial-gradient')) return false;
+  const h = bg.replace('#','');
+  if (h.length < 6) return false;
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 185;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1150,8 +1205,12 @@ function copyCss() {
   if (S.decos.has('overline'))  decList.push('overline');
   if (S.decos.has('strike'))    decList.push('line-through');
 
-  const shadow = buildShadow();
+  const shadow  = buildTextShadow();
+  const grad    = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
   const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
+
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgValue  = bgPreset?.css || S.bgColor;
 
   const lines = [
     `/* TypeForge — ${S.font} · ${S.style} */`,
@@ -1165,19 +1224,29 @@ function copyCss() {
     `  letter-spacing: ${S.spacing}px;`,
     `  line-height: ${S.lineHeight};`,
     `  text-align: ${S.align};`,
-    `  color: ${S.decos.has('outline') ? 'transparent' : S.textColor};`,
   ];
 
+  if (grad?.css) {
+    lines.push(
+      `  background: ${grad.css};`,
+      `  -webkit-background-clip: text;`,
+      `  -webkit-text-fill-color: transparent;`,
+      `  background-clip: text;`,
+    );
+  } else {
+    lines.push(`  color: ${S.decos.has('outline') ? 'transparent' : S.textColor};`);
+    if (S.decos.has('outline')) lines.push(`  -webkit-text-stroke: 2px ${S.textColor};`);
+  }
+
   if (decList.length) lines.push(`  text-decoration: ${decList.join(' ')};`);
-  if (S.decos.has('outline')) lines.push(`  -webkit-text-stroke: 2px ${S.textColor};`);
   if (shadow !== 'none') lines.push(`  text-shadow: ${shadow};`);
   if (S.decos.has('stamp')) lines.push(`  transform: rotate(-2.5deg);`, `  border: 3px solid ${S.textColor};`, `  opacity: 0.88;`);
-
-  lines.push(`  background: ${S.bgColor};`, `}`);
+  lines.push(`  background-color: ${bgValue};`);
+  lines.push(`}`);
 
   navigator.clipboard.writeText(lines.join('\n'))
-    .then(() => toast('CSS copied to clipboard!'))
-    .catch(() => toast('Copy failed — try again'));
+    .then(() => toast('CSS copied!'))
+    .catch(() => toast('Copy failed'));
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1186,9 +1255,11 @@ function copyCss() {
 
 function exportPng() {
   const canvas = document.getElementById('preview-canvas');
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgValue = bgPreset?.css?.startsWith('linear') ? '#0a0a0c' : (bgPreset?.css || S.bgColor);
   toast('Rendering PNG…');
   html2canvas(canvas, {
-    backgroundColor: S.bgColor,
+    backgroundColor: bgValue,
     scale: 2,
     useCORS: true,
     allowTaint: true,
@@ -1208,13 +1279,15 @@ function exportPng() {
 
 function exportSvg() {
   const importUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(S.font)}:wght@${S.weight}&display=swap`;
-  const W = 800, H = 400;
-  const shadow = buildShadow();
+  const W = 900, H = 450;
+  const shadow = buildTextShadow();
   const filterAttr = shadow !== 'none' ? `filter="url(#ds)"` : '';
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgFill = bgPreset?.css?.startsWith('linear') ? '#0a0a0c' : (bgPreset?.css || S.bgColor);
 
   let defs = `<style>@import url('${importUrl}');</style>`;
   if (shadow !== 'none') {
-    defs += `<filter id="ds"><feDropShadow dx="${S.shadowOff}" dy="${S.shadowOff}" stdDeviation="${S.shadowBlur/2}" flood-opacity="0.5"/></filter>`;
+    defs += `<filter id="ds"><feDropShadow dx="${S.shadowOff}" dy="${S.shadowOff}" stdDeviation="${S.shadowBlur/2}" flood-opacity="0.55"/></filter>`;
   }
 
   const decList = [];
@@ -1224,14 +1297,14 @@ function exportSvg() {
 
   const svgText = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <defs>${defs}</defs>
-  <rect width="${W}" height="${H}" fill="${S.bgColor}"/>
+  <rect width="${W}" height="${H}" fill="${bgFill}"/>
   <text
     x="${W/2}" y="${H/2}"
     dominant-baseline="middle"
     text-anchor="middle"
     font-family="'${S.font}', sans-serif"
     font-weight="${S.weight}"
-    font-size="${Math.min(S.size, 120)}"
+    font-size="${Math.min(S.size, 130)}"
     font-style="${S.italic ? 'italic' : 'normal'}"
     letter-spacing="${S.spacing}"
     fill="${S.decos.has('outline') ? 'transparent' : S.textColor}"
@@ -1239,7 +1312,7 @@ function exportSvg() {
     stroke-width="${S.decos.has('outline') ? 2 : 0}"
     text-decoration="${decList.join(' ') || 'none'}"
     ${filterAttr}
-  >${xmlEsc(S.text)}</text>
+  >${escHtml(S.text)}</text>
 </svg>`;
 
   const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
@@ -1250,10 +1323,6 @@ function exportSvg() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   toast('SVG exported!');
-}
-
-function xmlEsc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1276,8 +1345,11 @@ function toast(msg) {
 function init() {
   buildStyleTags();
   buildSwatches();
+  buildGradPills();
+  buildBgPresets();
+  buildDecoGrid();
   bindControls();
-  pickStyle(S.style);  // loads fonts + builds grid + renders
+  pickStyle(S.style);
   applyPreviewSize();
 }
 
