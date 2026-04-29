@@ -331,6 +331,34 @@ input[type="color"]:hover{border-color:var(--accent)}
 .export-panel__copy.copied{background:#16a34a}
 .export-panel__hint{font-size:10px;color:var(--text-muted)}
 
+/* ── Compare Mode ── */
+.compare-bar{display:flex;gap:8px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;align-items:center}
+.compare-bar__label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.compare-cols{display:flex;width:100%;height:100%}
+.compare-col{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.compare-col + .compare-col{border-left:1px solid var(--border)}
+.compare-col__header{
+  padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;gap:8px;background:var(--surface);
+}
+.compare-col__select{
+  flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:5px 8px;color:var(--text);font-size:12px;outline:none;cursor:pointer;font-family:inherit;
+  transition:border-color var(--transition);
+}
+.compare-col__select:hover,.compare-col__select:focus{border-color:var(--accent)}
+.compare-col__canvas{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;transition:background .12s}
+.compare-col__canvas::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.013) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.013) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.compare-col__text{
+  position:relative;z-index:1;max-width:90%;word-break:break-word;padding:30px;
+  pointer-events:none;user-select:none;text-align:center;
+}
+.compare-col__badge{font-size:9px;color:var(--text-muted);font-weight:500;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+
 /* ── Shortcuts Help Overlay ── */
 .shortcuts-overlay{position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .shortcuts-panel{
@@ -494,6 +522,7 @@ kbd{display:inline-flex;align-items:center;justify-content:center;padding:2px 7p
       <button class="size-btn" data-sz="Full">Full</button>
     </div>
     <div class="bar-actions">
+      <button class="action-btn" id="btn-compare" aria-label="Toggle compare mode">Compare</button>
       <button class="action-btn" id="btn-css" aria-label="Open export code panel">Export Code</button>
       <button class="action-btn" id="btn-svg">SVG</button>
       <button class="action-btn primary" id="btn-png">PNG</button>
@@ -928,6 +957,132 @@ function restoreUI() {
     b.classList.toggle('active', b.dataset.sz === S.previewSz));
   document.getElementById('shadow-controls')
     .classList.toggle('visible', S.decos.has('shadow') || S.decos.has('long-shadow'));
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   COMPARE MODE — T4
+════════════════════════════════════════════════════════════════════════ */
+
+let compareMode  = false;
+let compareFont1 = '';   // set when entering compare mode
+let compareFont2 = '';
+
+function enterCompareMode() {
+  compareFont1 = S.font;
+  // pick a different font as default second
+  const allFonts = STYLES[S.style] || STYLES['Swiss / Clean'];
+  compareFont2 = allFonts.find(f => f !== compareFont1) || allFonts[0];
+  loadFonts([compareFont1, compareFont2]);
+  renderCompare();
+}
+
+function exitCompareMode() {
+  const canvas = document.getElementById('preview-canvas');
+  canvas.innerHTML = `<div class="preview-canvas-inner" id="preview-inner"><div id="preview-text"></div></div>`;
+  _renderOnly();
+}
+
+function renderCompare() {
+  const canvas  = document.getElementById('preview-canvas');
+  const displayText = S.text || 'Type something…';
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgCss    = bgPreset?.css || S.bgColor;
+
+  canvas.innerHTML = `
+    <div class="compare-cols" style="background:${bgCss}">
+      <div class="compare-col">
+        <div class="compare-col__header">
+          <select class="compare-col__select" id="compare-sel-1" aria-label="Font for left column"></select>
+          <span class="compare-col__badge" id="compare-badge-1">${compareFont1}</span>
+        </div>
+        <div class="compare-col__canvas" id="compare-canvas-1" style="background:${bgCss}">
+          <div class="compare-col__text" id="compare-text-1"></div>
+        </div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-col__header">
+          <select class="compare-col__select" id="compare-sel-2" aria-label="Font for right column"></select>
+          <span class="compare-col__badge" id="compare-badge-2">${compareFont2}</span>
+        </div>
+        <div class="compare-col__canvas" id="compare-canvas-2" style="background:${bgCss}">
+          <div class="compare-col__text" id="compare-text-2"></div>
+        </div>
+      </div>
+    </div>`;
+
+  /* populate selects */
+  const allFonts = [
+    ...new Set([...(STYLES[S.style] || []), ...GF_FONTS.slice(0,30).map(f=>f.family)])
+  ];
+  [['compare-sel-1', compareFont1], ['compare-sel-2', compareFont2]].forEach(([selId, current]) => {
+    const sel = document.getElementById(selId);
+    allFonts.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f; opt.textContent = f;
+      if (f === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+
+  applyCompareStyles();
+  bindCompareSelects();
+}
+
+function applyCompareStyles() {
+  const grad = TEXT_GRADIENTS.find(g => g.id === S.textGrad);
+  [[compareFont1, 'compare-text-1'], [compareFont2, 'compare-text-2']].forEach(([font, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = S.text || 'Type something…';
+    el.style.fontFamily    = `'${font}', sans-serif`;
+    el.style.fontWeight    = S.weight;
+    el.style.fontSize      = Math.min(S.size, 110) + 'px';
+    el.style.letterSpacing = S.spacing + 'px';
+    el.style.lineHeight    = S.lineHeight;
+    el.style.fontStyle     = S.italic ? 'italic' : 'normal';
+    if (grad?.css) {
+      el.style.background = grad.css;
+      el.style.webkitBackgroundClip = 'text';
+      el.style.webkitTextFillColor  = 'transparent';
+      el.style.backgroundClip = 'text';
+    } else {
+      el.style.background = 'none';
+      el.style.webkitTextFillColor = '';
+      el.style.color = S.textColor;
+    }
+    el.style.textShadow = buildTextShadow();
+  });
+  /* update background */
+  const bgPreset = BG_PRESETS.find(p => p.id === S.bgPreset);
+  const bgCss    = bgPreset?.css || S.bgColor;
+  document.querySelectorAll('.compare-col__canvas').forEach(c => c.style.background = bgCss);
+  const cols = document.querySelector('.compare-cols');
+  if (cols) cols.style.background = bgCss;
+}
+
+function bindCompareSelects() {
+  const sel1 = document.getElementById('compare-sel-1');
+  const sel2 = document.getElementById('compare-sel-2');
+  if (sel1) sel1.addEventListener('change', e => {
+    compareFont1 = e.target.value;
+    loadFonts([compareFont1]);
+    document.getElementById('compare-badge-1').textContent = compareFont1;
+    applyCompareStyles();
+  });
+  if (sel2) sel2.addEventListener('change', e => {
+    compareFont2 = e.target.value;
+    loadFonts([compareFont2]);
+    document.getElementById('compare-badge-2').textContent = compareFont2;
+    applyCompareStyles();
+  });
+}
+
+function toggleCompareMode() {
+  compareMode = !compareMode;
+  document.getElementById('btn-compare').classList.toggle('active', compareMode);
+  /* hide/show size buttons — not meaningful in compare */
+  document.querySelector('.size-btns').style.visibility = compareMode ? 'hidden' : '';
+  if (compareMode) enterCompareMode(); else exitCompareMode();
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1366,6 +1521,7 @@ function bindControls() {
     });
   });
 
+  document.getElementById('btn-compare').addEventListener('click', toggleCompareMode);
   document.getElementById('btn-css').addEventListener('click', openExportPanel);
   document.getElementById('btn-png').addEventListener('click', exportPng);
   document.getElementById('btn-svg').addEventListener('click', exportSvg);
@@ -1456,6 +1612,7 @@ function render() {
 }
 
 function _renderOnly() {
+  if (compareMode) { applyCompareStyles(); return; }
   const el = document.getElementById('preview-text');
   const canvas = document.getElementById('preview-canvas');
   const inner = document.getElementById('preview-inner');
