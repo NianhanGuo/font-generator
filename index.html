@@ -380,7 +380,14 @@ input[type="color"]:hover{border-color:var(--accent)}
 
     <!-- Fonts -->
     <div class="section">
-      <div class="sec-label">Fonts</div>
+      <div class="sec-label" id="font-sec-label">Fonts</div>
+      <div style="position:relative;margin-bottom:8px">
+        <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:11px;pointer-events:none">⌕</span>
+        <input type="text" id="font-picker-search" placeholder="Search Google Fonts…"
+          aria-label="Search Google Fonts" autocomplete="off" spellcheck="false"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px 7px 26px;color:var(--text);font-size:11px;outline:none;font-family:inherit;transition:border-color var(--transition),box-shadow var(--transition);caret-color:var(--accent-light)">
+      </div>
+      <div id="font-cat-tabs" style="display:none;margin-bottom:8px;display:flex;gap:3px;flex-wrap:wrap"></div>
       <div class="font-grid" id="font-grid"></div>
     </div>
 
@@ -735,6 +742,98 @@ const S = {
   previewSz:  'M',
   loaded:     new Set(),
 };
+
+/* ════════════════════════════════════════════════════════════════════════
+   GOOGLE FONTS API — T2
+════════════════════════════════════════════════════════════════════════ */
+
+let GF_FONTS = [];            // [{family, category}]
+let GF_ACTIVE_CAT = 'all';   // category filter in search mode
+
+const GF_CAT_LABELS = {
+  'all':'All', 'sans-serif':'Sans', 'serif':'Serif',
+  'display':'Display', 'handwriting':'Script', 'monospace':'Mono',
+};
+
+async function fetchGoogleFonts() {
+  const el = document.getElementById('font-picker-search');
+  if (el) { el.disabled = true; el.placeholder = 'Loading Google Fonts…'; }
+  try {
+    const res = await fetch(
+      'https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&sort=popularity'
+    );
+    const data = await res.json();
+    GF_FONTS = (data.items || []).slice(0, 200).map(f => ({
+      family:   f.family,
+      category: f.category,
+    }));
+  } catch(e) {
+    GF_FONTS = [];
+    console.warn('GF API unavailable, using curated fonts only.');
+  }
+  if (el) {
+    el.disabled = false;
+    el.placeholder = GF_FONTS.length
+      ? `Search ${GF_FONTS.length} Google Fonts…`
+      : 'Search fonts…';
+  }
+  const qNow = el?.value?.trim() || '';
+  if (qNow) handleFontPickerSearch(qNow);
+}
+
+function buildCatTabs(query) {
+  const wrap = document.getElementById('font-cat-tabs');
+  if (!wrap) return;
+  if (!query.trim()) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  wrap.innerHTML = '';
+  const cats = ['all', 'sans-serif', 'serif', 'display', 'handwriting', 'monospace'];
+  cats.forEach(cat => {
+    const count = cat === 'all'
+      ? GF_FONTS.filter(f => f.family.toLowerCase().includes(query.toLowerCase())).length
+      : GF_FONTS.filter(f => f.category === cat && f.family.toLowerCase().includes(query.toLowerCase())).length;
+    if (count === 0 && cat !== 'all') return;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:3px 9px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:10px;cursor:pointer;transition:all .11s ease;font-family:inherit;white-space:nowrap';
+    btn.textContent = `${GF_CAT_LABELS[cat]} (${count})`;
+    if (cat === GF_ACTIVE_CAT) {
+      btn.style.background = 'var(--accent-dim)';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent-light)';
+    }
+    btn.addEventListener('click', () => {
+      GF_ACTIVE_CAT = cat;
+      handleFontPickerSearch(query);
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function handleFontPickerSearch(query) {
+  const label = document.getElementById('font-sec-label');
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    if (label) label.textContent = 'Fonts';
+    document.getElementById('font-cat-tabs').style.display = 'none';
+    GF_ACTIVE_CAT = 'all';
+    buildFontGrid(STYLES[S.style] || []);
+    return;
+  }
+  buildCatTabs(q);
+  const results = GF_FONTS
+    .filter(f => (GF_ACTIVE_CAT === 'all' || f.category === GF_ACTIVE_CAT)
+               && f.family.toLowerCase().includes(q))
+    .slice(0, 16)
+    .map(f => f.family);
+  if (label) label.textContent = `Fonts — ${results.length} result${results.length !== 1 ? 's' : ''}`;
+  if (results.length) {
+    loadFonts(results);
+    document.fonts.ready.then(() => buildFontGrid(results));
+  } else {
+    const grid = document.getElementById('font-grid');
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:14px 0;text-align:center;font-size:11px;color:var(--text-muted)">No fonts match "<em>${escHtml(query)}</em>"</div>`;
+  }
+}
 
 /* ════════════════════════════════════════════════════════════════════════
    PERSISTENCE — localStorage + URL hash
@@ -1153,7 +1252,24 @@ function bindControls() {
   document.getElementById('btn-png').addEventListener('click', exportPng);
   document.getElementById('btn-svg').addEventListener('click', exportSvg);
 
-  // Discovery search
+  // Font picker search (GF API)
+  const fpsEl = document.getElementById('font-picker-search');
+  if (fpsEl) {
+    let fst;
+    fpsEl.addEventListener('focus', e => { e.target.style.borderColor='var(--accent)'; e.target.style.boxShadow='0 0 0 3px var(--accent-dim)'; });
+    fpsEl.addEventListener('blur',  e => { e.target.style.borderColor=''; e.target.style.boxShadow=''; });
+    fpsEl.addEventListener('input', e => {
+      clearTimeout(fst);
+      fst = setTimeout(() => handleFontPickerSearch(e.target.value), 150);
+    });
+    // Clear search when style tag is clicked
+    document.getElementById('style-tags').addEventListener('click', () => {
+      fpsEl.value = '';
+      handleFontPickerSearch('');
+    });
+  }
+
+  // Discovery search (right panel)
   let st;
   document.getElementById('font-search').addEventListener('input', e => {
     clearTimeout(st);
@@ -1631,6 +1747,7 @@ function init() {
   }
   applyPreviewSize();
   bindExportPanel();
+  fetchGoogleFonts(); // non-blocking; populates GF_FONTS when ready
 }
 
 init();
