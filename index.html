@@ -331,6 +331,24 @@ input[type="color"]:hover{border-color:var(--accent)}
 .export-panel__copy.copied{background:#16a34a}
 .export-panel__hint{font-size:10px;color:var(--text-muted)}
 
+/* ── Shortcuts Help Overlay ── */
+.shortcuts-overlay{position:fixed;inset:0;z-index:800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.shortcuts-panel{
+  background:var(--surface);border:1px solid var(--border-hover);border-radius:12px;
+  width:min(440px,calc(100vw - 32px));overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.65);
+}
+.shortcuts-panel__header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border)}
+.shortcuts-panel__title{font-size:13px;font-weight:700;letter-spacing:-.3px}
+.shortcuts-panel__close{width:26px;height:26px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.shortcuts-panel__close:hover{border-color:var(--border-hover);color:var(--text)}
+.shortcuts-panel__body{padding:14px 18px 18px}
+.shortcuts-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.shortcuts-row:last-child{border-bottom:none}
+.shortcuts-row__desc{font-size:12px;color:var(--text-dim)}
+.shortcuts-row__keys{display:flex;gap:4px}
+kbd{display:inline-flex;align-items:center;justify-content:center;padding:2px 7px;background:var(--surface3);border:1px solid var(--border-hover);border-radius:4px;font-size:10px;font-family:inherit;color:var(--text-dim);min-width:24px}
+
 /* ── Toast ── */
 #toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);
@@ -503,6 +521,23 @@ input[type="color"]:hover{border-color:var(--accent)}
 </div>
 
 </div><!-- /app -->
+
+<!-- ══ KEYBOARD SHORTCUTS OVERLAY ══════════════════════════════════════ -->
+<div id="shortcuts-overlay" class="shortcuts-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+  <div class="shortcuts-panel">
+    <div class="shortcuts-panel__header">
+      <span class="shortcuts-panel__title">Keyboard Shortcuts</span>
+      <button class="shortcuts-panel__close" id="shortcuts-close" aria-label="Close shortcuts panel">✕</button>
+    </div>
+    <div class="shortcuts-panel__body">
+      <div class="shortcuts-row"><span class="shortcuts-row__desc">Micro-adjust hovered slider</span><div class="shortcuts-row__keys"><kbd>↑</kbd><kbd>↓</kbd></div></div>
+      <div class="shortcuts-row"><span class="shortcuts-row__desc">Large-step adjust hovered slider</span><div class="shortcuts-row__keys"><kbd>⇧</kbd><kbd>↑</kbd> / <kbd>↓</kbd></div></div>
+      <div class="shortcuts-row"><span class="shortcuts-row__desc">Copy active export tab</span><div class="shortcuts-row__keys"><kbd>⌘/Ctrl</kbd><kbd>C</kbd></div></div>
+      <div class="shortcuts-row"><span class="shortcuts-row__desc">Undo last parameter change</span><div class="shortcuts-row__keys"><kbd>⌘/Ctrl</kbd><kbd>Z</kbd></div></div>
+      <div class="shortcuts-row"><span class="shortcuts-row__desc">Show / hide this panel</span><div class="shortcuts-row__keys"><kbd>?</kbd></div></div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ EXPORT PANEL MODAL ══════════════════════════════════════════════ -->
 <div id="export-overlay" class="export-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Export code panel">
@@ -893,6 +928,89 @@ function restoreUI() {
     b.classList.toggle('active', b.dataset.sz === S.previewSz));
   document.getElementById('shadow-controls')
     .classList.toggle('visible', S.decos.has('shadow') || S.decos.has('long-shadow'));
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   UNDO HISTORY + KEYBOARD SHORTCUTS — T6
+════════════════════════════════════════════════════════════════════════ */
+
+const UNDO_STACK = [];   // snapshots of S before each change
+const UNDO_LIMIT = 20;
+let activeSlider = null; // the range input currently under the cursor
+
+function snapshotState() {
+  /* called at the START of render() so we capture the pre-change state */
+  const snap = { ...S, decos: new Set(S.decos) };
+  UNDO_STACK.push(snap);
+  if (UNDO_STACK.length > UNDO_LIMIT) UNDO_STACK.shift();
+}
+
+function undoLastChange() {
+  if (!UNDO_STACK.length) { toast('Nothing to undo'); return; }
+  const snap = UNDO_STACK.pop();
+  Object.assign(S, snap);
+  S.decos = new Set(snap.decos);
+  const fonts = STYLES[S.style] || STYLES['Swiss / Clean'];
+  loadFonts(fonts);
+  buildFontGrid(fonts);
+  buildDecoGrid();
+  restoreUI();
+  /* render without snapshotting again */
+  _renderOnly();
+  toast('Undone');
+}
+
+function toggleShortcutsHelp() {
+  const el = document.getElementById('shortcuts-overlay');
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function bindKeyboard() {
+  /* Track which slider thumb is hovered */
+  document.addEventListener('mouseover', e => {
+    if (e.target.matches('input[type="range"]')) activeSlider = e.target;
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target === activeSlider) activeSlider = null;
+  });
+
+  document.addEventListener('keydown', e => {
+    const inInput = e.target.matches('input[type="text"],input[type="search"],textarea');
+
+    if (e.key === '?' && !inInput) { e.preventDefault(); toggleShortcutsHelp(); return; }
+
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !inInput) {
+      e.preventDefault(); undoLastChange(); return;
+    }
+
+    if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !inInput) {
+      e.preventDefault();
+      const code = document.getElementById('export-code')?.textContent;
+      if (code) {
+        navigator.clipboard.writeText(code).then(() => toast('Code copied!')).catch(() => copyCss());
+      } else { copyCss(); }
+      return;
+    }
+
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && activeSlider && !inInput) {
+      e.preventDefault();
+      const sl    = activeSlider;
+      const step  = parseFloat(sl.step) || 1;
+      const delta = (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? step * 10 : step);
+      const nv    = Math.min(parseFloat(sl.max), Math.max(parseFloat(sl.min), parseFloat(sl.value) + delta));
+      sl.value = nv;
+      sl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+
+  /* Shortcuts panel close */
+  document.getElementById('shortcuts-close').addEventListener('click', () => {
+    document.getElementById('shortcuts-overlay').style.display = 'none';
+  });
+  document.getElementById('shortcuts-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget)
+      document.getElementById('shortcuts-overlay').style.display = 'none';
+  });
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1333,6 +1451,11 @@ function buildTextShadow() {
 ════════════════════════════════════════════════════════════════════════ */
 
 function render() {
+  snapshotState();   /* capture pre-change state for undo */
+  _renderOnly();
+}
+
+function _renderOnly() {
   const el = document.getElementById('preview-text');
   const canvas = document.getElementById('preview-canvas');
   const inner = document.getElementById('preview-inner');
@@ -1747,6 +1870,7 @@ function init() {
   }
   applyPreviewSize();
   bindExportPanel();
+  bindKeyboard();
   fetchGoogleFonts(); // non-blocking; populates GF_FONTS when ready
 }
 
